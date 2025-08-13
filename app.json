@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "pn-rn-GoTask",
+    "name": "PN RNExpo GoTask",
     "slug": "pn-rn-GoTask",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,15 +9,19 @@
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
+      "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.pixelnest.rnexpo_gotask",
+      "buildNumber": "1.0.0",
+      "supportsTablet": false
     },
     "android": {
+      "package": "com.pixelnest.rnexpo_gotask",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       }
     },
