@@ -21,6 +21,9 @@ import { Calendar } from "react-native-calendars";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as WebBrowser from "expo-web-browser";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import * as MediaLibrary from "expo-media-library";
 const teamsList = [
   "Designer team",
   "Developer team",
@@ -46,6 +49,55 @@ const AddNewScreen = ({ navigation, route }) => {
   const [dateSelectionFor, setDateSelectionFor] = useState("");
   const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
   const [attachments, setAttachments] = useState([]);
+
+  // Function to download file
+  const handleDownload = async (file) => {
+    try {
+      // Request permission
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== "granted") {
+        alert("Permission required to save files to gallery.");
+        return;
+      }
+
+      // For images, save directly
+      if (file.type.includes("image")) {
+        const asset = await MediaLibrary.createAssetAsync(file.uri);
+        await MediaLibrary.createAlbumAsync("MyApp", asset, false);
+        alert("Image saved to gallery!");
+      } else {
+        // For PDFs/Docs, first copy to FileSystem.documentDirectory
+        const fileUri = FileSystem.documentDirectory + file.name;
+        await FileSystem.copyAsync({ from: file.uri, to: fileUri });
+
+        const asset = await MediaLibrary.createAssetAsync(fileUri);
+        await MediaLibrary.createAlbumAsync("MyApp", asset, false);
+        alert("File saved to gallery!");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save file to gallery.");
+    }
+  };
+
+  // Function to share file
+  const handleShare = async (file) => {
+    try {
+      const fileUri = FileSystem.documentDirectory + file.name;
+      console.warn(fileUri);
+      // Ensure file is stored locally before sharing
+      await FileSystem.downloadAsync(file.uri, fileUri);
+
+      if (!(await Sharing.isAvailableAsync())) {
+        alert("Sharing is not available on this device");
+        return;
+      }
+      await Sharing.shareAsync(fileUri);
+    } catch (error) {
+      console.error("Share error:", error);
+      alert("Failed to share file");
+    }
+  };
 
   useEffect(() => {
     if (route.params?.members) {
@@ -122,12 +174,12 @@ const AddNewScreen = ({ navigation, route }) => {
     });
     console.warn(result.assets[0].mimeType);
     // if (result.type === "success") {
-      const file = {
-        name: result.assets[0].name,
-        uri: result.assets[0].uri,
-        type: result.assets[0].mimeType ,
-      };
-      setAttachments((prev) => [...prev, file]);
+    const file = {
+      name: result.assets[0].name,
+      uri: result.assets[0].uri,
+      type: result.assets[0].mimeType,
+    };
+    setAttachments((prev) => [...prev, file]);
     // }
   };
 
@@ -181,6 +233,121 @@ const AddNewScreen = ({ navigation, route }) => {
       </TouchableOpacity>
     </Modal>
   );
+  // const attachmentsDisplay = () =>
+  //   attachments.length > 0 && (
+  //     <View
+  //       style={{
+  //         marginHorizontal: Sizes.fixPadding * 2,
+  //         marginBottom: Sizes.fixPadding * 2,
+  //       }}
+  //     >
+  //       <Text style={Fonts.blackColor16Medium}>Selected Files</Text>
+
+  //       {attachments.map((file, index) => {
+  //         // Get lowercase name for easy matching
+  //         const fileName = file.name?.toLowerCase() || "";
+  //         const mimeType = file.type?.toLowerCase() || "";
+
+  //         const isImage =
+  //           mimeType.includes("image") ||
+  //           fileName.endsWith(".jpg") ||
+  //           fileName.endsWith(".jpeg") ||
+  //           fileName.endsWith(".png") ||
+  //           fileName.endsWith(".gif") ||
+  //           fileName.endsWith(".webp");
+
+  //           console.warn("mimType:"+mimeType)
+
+  //         const isPDF = mimeType.includes("pdf") || fileName.endsWith(".pdf");
+  //         const isWord =
+  //           mimeType.includes("word") ||
+  //           fileName.endsWith(".doc") ||
+  //           fileName.endsWith(".docx");
+  //         const isExcel =
+  //           mimeType.includes("excel") ||
+  //           fileName.endsWith(".xls") ||
+  //           fileName.endsWith(".xlsx");
+
+  //         return (
+  //           // <View key={index} style={styles.attachmentRow}>
+  //           //   {isImage ? (
+  //           //     <Image
+  //           //       source={{ uri: file.uri }}
+  //           //       style={{
+  //           //         width: 40,
+  //           //         height: 40,
+  //           //         borderRadius: 4,
+  //           //         marginRight: Sizes.fixPadding,
+  //           //       }}
+  //           //     />
+  //           //   ) : (
+  //           //     <MaterialIcons
+  //           //       name={
+  //           //         isPDF
+  //           //           ? "picture-as-pdf"
+  //           //           : isWord
+  //           //           ? "article"
+  //           //           : isExcel
+  //           //           ? "grid-on"
+  //           //           : "insert-drive-file"
+  //           //       }
+  //           //       size={24}
+  //           //       color={Colors.primaryColor}
+  //           //       style={{ marginRight: Sizes.fixPadding }}
+  //           //     />
+  //           //   )}
+
+  //           //   <Text
+  //           //     style={{ ...Fonts.blackColor15Medium, flex: 1 }}
+  //           //     numberOfLines={1}
+  //           //   >
+  //           //     {file.name}
+  //           //   </Text>
+  //           // </View>
+  //           <View key={index} style={styles.attachmentRow}>
+  //             <TouchableOpacity
+  //               style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+  //               onPress={() => WebBrowser.openBrowserAsync(file.uri)}
+  //             >
+  //               {isImage ? (
+  //                 <Image
+  //                   source={{ uri: file.uri }}
+  //                   style={{
+  //                     width: 40,
+  //                     height: 40,
+  //                     borderRadius: 4,
+  //                     marginRight: Sizes.fixPadding,
+  //                   }}
+  //                 />
+  //               ) : (
+  //                 <MaterialIcons
+  //                   name={
+  //                     isPDF
+  //                       ? "picture-as-pdf"
+  //                       : isWord
+  //                       ? "article"
+  //                       : isExcel
+  //                       ? "grid-on"
+  //                       : "insert-drive-file"
+  //                   }
+  //                   size={24}
+  //                   color={Colors.primaryColor}
+  //                   style={{ marginRight: Sizes.fixPadding }}
+  //                 />
+  //               )}
+
+  //               <Text
+  //                 style={{ ...Fonts.blackColor15Medium, flex: 1 }}
+  //                 numberOfLines={1}
+  //               >
+  //                 {file.name}
+  //               </Text>
+  //             </TouchableOpacity>
+  //           </View>
+  //         );
+  //       })}
+  //     </View>
+  //   );
   const attachmentsDisplay = () =>
     attachments.length > 0 && (
       <View
@@ -192,7 +359,6 @@ const AddNewScreen = ({ navigation, route }) => {
         <Text style={Fonts.blackColor16Medium}>Selected Files</Text>
 
         {attachments.map((file, index) => {
-          // Get lowercase name for easy matching
           const fileName = file.name?.toLowerCase() || "";
           const mimeType = file.type?.toLowerCase() || "";
 
@@ -203,8 +369,6 @@ const AddNewScreen = ({ navigation, route }) => {
             fileName.endsWith(".png") ||
             fileName.endsWith(".gif") ||
             fileName.endsWith(".webp");
-
-            console.warn("mimType:"+mimeType)
 
           const isPDF = mimeType.includes("pdf") || fileName.endsWith(".pdf");
           const isWord =
@@ -217,42 +381,8 @@ const AddNewScreen = ({ navigation, route }) => {
             fileName.endsWith(".xlsx");
 
           return (
-            // <View key={index} style={styles.attachmentRow}>
-            //   {isImage ? (
-            //     <Image
-            //       source={{ uri: file.uri }}
-            //       style={{
-            //         width: 40,
-            //         height: 40,
-            //         borderRadius: 4,
-            //         marginRight: Sizes.fixPadding,
-            //       }}
-            //     />
-            //   ) : (
-            //     <MaterialIcons
-            //       name={
-            //         isPDF
-            //           ? "picture-as-pdf"
-            //           : isWord
-            //           ? "article"
-            //           : isExcel
-            //           ? "grid-on"
-            //           : "insert-drive-file"
-            //       }
-            //       size={24}
-            //       color={Colors.primaryColor}
-            //       style={{ marginRight: Sizes.fixPadding }}
-            //     />
-            //   )}
-
-            //   <Text
-            //     style={{ ...Fonts.blackColor15Medium, flex: 1 }}
-            //     numberOfLines={1}
-            //   >
-            //     {file.name}
-            //   </Text>
-            // </View>
             <View key={index} style={styles.attachmentRow}>
+              {/* Open file on tap */}
               <TouchableOpacity
                 style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
                 onPress={() => WebBrowser.openBrowserAsync(file.uri)}
@@ -291,12 +421,28 @@ const AddNewScreen = ({ navigation, route }) => {
                   {file.name}
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setAttachments((prev) => prev.filter((_, i) => i !== index));
+                }}
+                style={{ marginLeft: Sizes.fixPadding }}
+              >
+                <MaterialIcons name="close" size={24} color="green" />
+              </TouchableOpacity>
+              {/* Download Button */}
+              {/* <TouchableOpacity onPress={() => handleDownload(file)}>
+                <MaterialIcons name="file-download" size={24} color="green" />
+              </TouchableOpacity> */}
+
+              {/* Share Button */}
+              {/* <TouchableOpacity onPress={() => handleShare(file)}>
+                <MaterialIcons name="share" size={24} color="blue" />
+              </TouchableOpacity> */}
             </View>
           );
         })}
       </View>
     );
-
   const optionSort = ({ iconName, color, option, onPress }) => (
     <TouchableOpacity
       activeOpacity={0.8}
