@@ -25,11 +25,64 @@ import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 const teamsList = [
+  "Designeriiiii team",
+  "Developer team",
+  "HR team",
+  "Marketing team",
+  "Management team",
   "Designer team",
   "Developer team",
   "HR team",
   "Marketing team",
   "Management team",
+  "Designer team",
+  "Developer team",
+  "HR team",
+  "Marketing team",
+  "Management team",
+  "Designer team",
+  "Developer team",
+  "HR team",
+  "Marketing team",
+  "Management team",
+  "Designer team",
+  "Developer team",
+  "HR team",
+  "Marketing team",
+  "Management team",
+  "Designer team",
+  "Developer team",
+  "HR team",
+  "Marketing team",
+  "Management team",
+  "Designer team",
+  "Developer team",
+  "HR team",
+  "Marketing team",
+  "Management team",
+  "Designer team",
+  "Developer team",
+  "HR team",
+  "Marketing team",
+  "Management team",
+  "Designer team",
+  "Developer team",
+  "HR team",
+  "Marketing team",
+  "Management team",
+  "Designer team",
+  "Developer team",
+  "HR team",
+  "Marketing team",
+  "Management4444444 team",
+];
+
+const projectList = [
+  "Project 1",
+  "Project 2",
+  "Project 3",
+  "Project 4",
+  "Project 5",
 ];
 
 const AddNewScreen = ({ navigation, route }) => {
@@ -37,19 +90,20 @@ const AddNewScreen = ({ navigation, route }) => {
   const todayDate = new Date().toLocaleDateString();
 
   const [taskName, setTaskName] = useState("");
-  const [projectName, setProjectName] = useState("");
   const [startingDate, setStartingDate] = useState("");
   const [endingDate, setEndingDate] = useState("");
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState("");
+  const [selectedProject, setSelectedProject] = useState("");
   const [showMenu, setShowMenu] = useState(false);
+  const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [defaultDate, setDefaultDate] = useState(new Date().getDate());
   const [dateSelectionFor, setDateSelectionFor] = useState("");
   const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
   const [attachments, setAttachments] = useState([]);
-
+  const [projectName, setprojectName] = useState("");
   // Function to download file
   const handleDownload = async (file) => {
     try {
@@ -573,12 +627,114 @@ const AddNewScreen = ({ navigation, route }) => {
     </Modal>
   );
 
-  const addButton = () => (
-    <Button
-      buttonText={from === "task" ? "Add task" : "Add project"}
-      onPress={() => navigation.pop()}
-    />
-  );
+  const handleAdd = async () => {
+    try {
+      let formData = new FormData();
+
+      // Optional: Append files if you have any
+      // attachments?.forEach((file, index) => {
+      //   formData.append("files", {
+      //     uri: file.uri,
+      //     name: file.name || `file_${index}`,
+      //     type: file.type || "application/octet-stream",
+      //   });
+      // });
+      for (let i = 0; i < attachments.length; i++) {
+        const file = attachments[i];
+
+        const fileUri = file.uri;
+        const mimeType = getMimeType(file.name || file.uri);
+        const safeName =
+          file.name?.replace(/[^a-zA-Z0-9._-]/g, "_") ||
+          `file_${Date.now()}_${i}`;
+
+        // console.log("✅ Final file info:", {
+        //   fileUri,
+        //   name: safeName,
+        //   type: mimeType,
+        // });
+
+        // If something critical is missing, skip the file
+        if (!fileUri || !mimeType || !safeName) {
+          // console.warn(`❌ Skipping invalid file at index ${i}`, file);
+          continue;
+        }
+
+        formData.append("files", {
+          uri: fileUri,
+          name: safeName,
+          type: mimeType,
+        });
+      }
+      // Convert "dd/mm/yyyy" strings to ISO format "yyyy-MM-dd"
+      const parseDMY = (str) => {
+        const [day, month, year] = str.split("/").map(Number);
+        return new Date(year, month - 1, day); // JS months are 0-indexed
+      };
+
+      const formatDate = (date) => {
+        const d = new Date(date);
+        const month = `${d.getMonth() + 1}`.padStart(2, "0");
+        const day = `${d.getDate()}`.padStart(2, "0");
+        const year = d.getFullYear();
+        return `${year}-${month}-${day}`;
+      };
+
+      const project = {
+        name: projectName,
+        startDate: formatDate(parseDMY(startingDate)), // e.g., "2025-08-29"
+        endDate: formatDate(parseDMY(endingDate)), // e.g., "2025-08-31"
+        team: selectedTeam,
+      };
+
+      formData.append("project", JSON.stringify(project));
+
+      const response = await fetch(
+        "http://192.168.8.103:8080/api/v1/project/save",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+      console.warn(result);
+
+      if (result.status === "200") {
+        Alert.alert("Success", "Project created successfully!");
+        navigation.pop();
+      } else {
+        Alert.alert(
+          "Failed",
+          result?.errorMessages?.[0] || "Please try again."
+        );
+      }
+    } catch (err) {
+      console.error("Error creating project:", err);
+      Alert.alert("Error", "Something went wrong. Try again later.");
+    }
+  };
+
+  const getMimeType = (path) => {
+    if (!path || typeof path !== "string") return null;
+
+    const extension = path.split(".").pop()?.toLowerCase();
+
+    const mimeMap = {
+      pdf: "application/pdf",
+      doc: "application/msword",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      txt: "text/plain",
+      gif: "image/gif",
+      bmp: "image/bmp",
+      heic: "image/heic",
+    };
+
+    return mimeMap[extension] || "application/octet-stream"; // fallback if unknown
+  };
 
   // ---------- Form Fields ----------
   const taskNameInfo = () => (
@@ -598,25 +754,96 @@ const AddNewScreen = ({ navigation, route }) => {
     </View>
   );
 
-  const projectNameInfo = () => (
-    <View
-      style={{
-        marginHorizontal: Sizes.fixPadding * 2,
-        marginTop: from === "task" ? 0 : Sizes.fixPadding * 2,
-      }}
-    >
-      <Text style={Fonts.blackColor16Medium}>Project name</Text>
-      <View style={styles.infoBox}>
-        <TextInput
-          value={projectName}
-          onChangeText={setProjectName}
-          placeholder="Enter project name"
-          placeholderTextColor={Colors.grayColor}
-          style={{ ...Fonts.blackColor15Medium, padding: 0 }}
-          cursorColor={Colors.primaryColor}
-          selectionColor={Colors.primaryColor}
-        />
+  // function projectNameInfo() {
+  //   return (
+  //     <View
+  //       style={{
+  //         marginHorizontal: Sizes.fixPadding * 2.0,
+  //         marginTop: from == "task" ? 0 : Sizes.fixPadding * 2.0,
+  //       }}
+  //     >
+  //       <Text style={{ ...Fonts.blackColor16Medium }}>Project name</Text>
+  //       <View style={styles.infoBox}>
+  //         <TextInput
+  //           value={projectName}
+  //           onChangeText={setprojectName}
+  //           placeholder="Enter project name"
+  //           placeholderTextColor={Colors.grayColor}
+  //           style={{ ...Fonts.blackColor15Medium, padding: 0 }}
+  //           cursorColor={Colors.primaryColor}
+  //           selectionColor={Colors.primaryColor}
+  //         />
+  //       </View>
+  //     </View>
+  //   );
+  // }
+  function projectNameInfo() {
+    return (
+      <View
+        style={{
+          marginHorizontal: Sizes.fixPadding * 2.0,
+          marginTop: from == "task" ? 0 : Sizes.fixPadding * 2.0,
+        }}
+      >
+        <Text style={{ ...Fonts.blackColor16Medium }}>Project name</Text>
+        <View style={styles.infoBox}>
+          <TextInput
+            value={projectName}
+            onChangeText={setprojectName}
+            placeholder="Enter project name"
+            placeholderTextColor={Colors.grayColor}
+            style={{ ...Fonts.blackColor15Medium, padding: 0 }}
+            cursorColor={Colors.primaryColor}
+            selectionColor={Colors.primaryColor}
+          />
+        </View>
       </View>
+    );
+  }
+  const selectProject = () => (
+    <View style={{ marginHorizontal: Sizes.fixPadding * 2 }}>
+      <Text style={Fonts.blackColor16Medium}>Select Project</Text>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => setShowProjectMenu(true)}
+        style={{ ...styles.infoBox, ...CommonStyles.rowAlignCenter }}
+      >
+        <Text
+          style={{
+            ...(selectedProject
+              ? Fonts.blackColor15Medium
+              : Fonts.grayColor15Medium),
+            flex: 1,
+          }}
+          numberOfLines={1}
+        >
+          {"Select Project"}
+        </Text>
+        <Menu
+          visible={showProjectMenu}
+          anchor={
+            <Ionicons name="chevron-down" color={Colors.grayColor} size={20} />
+          }
+          onRequestClose={() => setShowProjectMenu(false)}
+        >
+          <ScrollView
+            style={{ maxHeight: 200 }}
+            showsVerticalScrollIndicator={true}
+          >
+            {projectList.map((option, index) => (
+              <MenuItem
+                key={index}
+                onPress={() => {
+                  setSelectedProject(option);
+                  setShowProjectMenu(false);
+                }}
+              >
+                <Text style={Fonts.blackColor16Medium}>{option}</Text>
+              </MenuItem>
+            ))}
+          </ScrollView>
+        </Menu>
+      </TouchableOpacity>
     </View>
   );
 
@@ -646,7 +873,7 @@ const AddNewScreen = ({ navigation, route }) => {
     <View
       style={{
         marginHorizontal: Sizes.fixPadding * 2,
-        marginTop: from === "task" ? 0 : Sizes.fixPadding * 2,
+        marginTop: 0,
       }}
     >
       <Text style={Fonts.blackColor16Medium}>Ending date</Text>
@@ -699,6 +926,17 @@ const AddNewScreen = ({ navigation, route }) => {
     </View>
   );
 
+  function addButton() {
+    return (
+      <Button
+        buttonText={from == "task" ? "Add task" : "Add project"}
+        onPress={() => {
+          handleAdd();
+          // navigation.pop()
+        }}
+      />
+    );
+  }
   const teamInfo = () => (
     <View style={{ marginHorizontal: Sizes.fixPadding * 2 }}>
       <Text style={Fonts.blackColor16Medium}>Select team</Text>
@@ -725,7 +963,10 @@ const AddNewScreen = ({ navigation, route }) => {
           }
           onRequestClose={() => setShowMenu(false)}
         >
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={{ maxHeight: 200 }}
+            showsVerticalScrollIndicator={true}
+          >
             {teamsList.map((option, index) => (
               <MenuItem
                 key={index}
@@ -801,6 +1042,7 @@ const AddNewScreen = ({ navigation, route }) => {
       >
         {from === "task" && taskNameInfo()}
         {projectNameInfo()}
+        {/* {projectNameInfo()} */}
         {startingDateInfo()}
         {endingDateInfo()}
         {attachmentInfo()}
