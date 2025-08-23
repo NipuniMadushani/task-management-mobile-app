@@ -429,7 +429,7 @@ const AddNewScreen = ({ navigation, route }) => {
           });
           // Alert.alert("Success", "Project created successfully!");
           setTimeout(() => {
-            navigation.goBack(); // or navigation.pop()
+             navigation.pop(); // or navigation.pop()
           }, 2000);
         } else {
           // Show error dialog
@@ -527,7 +527,7 @@ const AddNewScreen = ({ navigation, route }) => {
           });
           // Alert.alert("Success", "Project created successfully!");
           setTimeout(() => {
-            navigation.goBack(); // or navigation.pop()
+            navigation.pop(); // or navigation.pop()
           }, 2000);
         } else {
           Dialog.show({
