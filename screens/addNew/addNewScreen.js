@@ -24,67 +24,14 @@ import * as WebBrowser from "expo-web-browser";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
-const teamsList = [
-  "Designeriiiii team",
-  "Developer team",
-  "HR team",
-  "Marketing team",
-  "Management team",
-  "Designer team",
-  "Developer team",
-  "HR team",
-  "Marketing team",
-  "Management team",
-  "Designer team",
-  "Developer team",
-  "HR team",
-  "Marketing team",
-  "Management team",
-  "Designer team",
-  "Developer team",
-  "HR team",
-  "Marketing team",
-  "Management team",
-  "Designer team",
-  "Developer team",
-  "HR team",
-  "Marketing team",
-  "Management team",
-  "Designer team",
-  "Developer team",
-  "HR team",
-  "Marketing team",
-  "Management team",
-  "Designer team",
-  "Developer team",
-  "HR team",
-  "Marketing team",
-  "Management team",
-  "Designer team",
-  "Developer team",
-  "HR team",
-  "Marketing team",
-  "Management team",
-  "Designer team",
-  "Developer team",
-  "HR team",
-  "Marketing team",
-  "Management team",
-  "Designer team",
-  "Developer team",
-  "HR team",
-  "Marketing team",
-  "Management4444444 team",
-];
-
-const projectList = [
-  "Project 1",
-  "Project 2",
-  "Project 3",
-  "Project 4",
-  "Project 5",
-];
-
+import { Form, Formik } from "formik";
+import * as Yup from "yup";
+import {
+  ALERT_TYPE,
+  AlertNotificationRoot,
+  Dialog,
+  Toast,
+} from "react-native-alert-notification";
 const AddNewScreen = ({ navigation, route }) => {
   const from = route.params.from;
   const todayDate = new Date().toLocaleDateString();
@@ -94,7 +41,7 @@ const AddNewScreen = ({ navigation, route }) => {
   const [endingDate, setEndingDate] = useState("");
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState("");
-  const [selectedProject, setSelectedProject] = useState("");
+  const [selectedProject, setSelectedProject] = useState([]);
   const [showMenu, setShowMenu] = useState(false);
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -104,54 +51,67 @@ const AddNewScreen = ({ navigation, route }) => {
   const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [projectName, setprojectName] = useState("");
-  // Function to download file
-  const handleDownload = async (file) => {
-    try {
-      // Request permission
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== "granted") {
-        alert("Permission required to save files to gallery.");
-        return;
-      }
+  // const [teamsList,setTeamList] = useState([]);
 
-      // For images, save directly
-      if (file.type.includes("image")) {
-        const asset = await MediaLibrary.createAssetAsync(file.uri);
-        await MediaLibrary.createAlbumAsync("MyApp", asset, false);
-        alert("Image saved to gallery!");
-      } else {
-        // For PDFs/Docs, first copy to FileSystem.documentDirectory
-        const fileUri = FileSystem.documentDirectory + file.name;
-        await FileSystem.copyAsync({ from: file.uri, to: fileUri });
+  useEffect(() => {
+    console.warn("called...");
+    if (from === "task") {
+      const fetchProjects = async () => {
+        console.warn("calledeee...");
+        try {
+          const response = await fetch(
+            "http://192.168.8.100:8080/api/v1/project/"
+          ); // change localhost to your backend IP if using mobile
+          const result = await response.json();
+          // console.warn(result);
 
-        const asset = await MediaLibrary.createAssetAsync(fileUri);
-        await MediaLibrary.createAlbumAsync("MyApp", asset, false);
-        alert("File saved to gallery!");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Failed to save file to gallery.");
+          if (result.status === 200) {
+            console.warn("Suucess");
+            // console.warn(result.payload[0]);
+            const projectNames = result.payload[0].map((item) => item.name);
+            console.warn(projectNames);
+            setSelectedProject(result.payload[0]); // because payload is wrapped in a list
+          } else {
+            console.warn(result.errorMessages?.[0] || "No records found");
+          }
+        } catch (error) {
+          console.error("Error fetching projects:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchProjects();
     }
-  };
+  }, []);
 
-  // Function to share file
-  const handleShare = async (file) => {
-    try {
-      const fileUri = FileSystem.documentDirectory + file.name;
-      console.warn(fileUri);
-      // Ensure file is stored locally before sharing
-      await FileSystem.downloadAsync(file.uri, fileUri);
-
-      if (!(await Sharing.isAvailableAsync())) {
-        alert("Sharing is not available on this device");
-        return;
-      }
-      await Sharing.shareAsync(fileUri);
-    } catch (error) {
-      console.error("Share error:", error);
-      alert("Failed to share file");
-    }
-  };
+  const teamsList = [
+    "Designer team",
+    "Developer team",
+    "HR team",
+    "Marketing team",
+    "Management team",
+  ];
+  const validationSchema = Yup.object().shape({
+    taskName:
+      from === "task"
+        ? Yup.string().required("Task name is required")
+        : Yup.string(),
+    projectName:
+      from === "project"
+        ? Yup.string().required("Project name is required")
+        : Yup.string(),
+    startingDate: Yup.string().required("Starting date is required"),
+    endingDate: Yup.string().required("Ending date is required"),
+    // selectedProject:
+    //   from === "task"
+    //     ? Yup.string().required("Project selection is required")
+    //     : Yup.string(),
+    // selectedTeam:
+    //   from === "task"
+    //     ? Yup.string().required("Project selection is required")
+    //     : Yup.string(),
+  });
 
   useEffect(() => {
     if (route.params?.members) {
@@ -287,121 +247,7 @@ const AddNewScreen = ({ navigation, route }) => {
       </TouchableOpacity>
     </Modal>
   );
-  // const attachmentsDisplay = () =>
-  //   attachments.length > 0 && (
-  //     <View
-  //       style={{
-  //         marginHorizontal: Sizes.fixPadding * 2,
-  //         marginBottom: Sizes.fixPadding * 2,
-  //       }}
-  //     >
-  //       <Text style={Fonts.blackColor16Medium}>Selected Files</Text>
 
-  //       {attachments.map((file, index) => {
-  //         // Get lowercase name for easy matching
-  //         const fileName = file.name?.toLowerCase() || "";
-  //         const mimeType = file.type?.toLowerCase() || "";
-
-  //         const isImage =
-  //           mimeType.includes("image") ||
-  //           fileName.endsWith(".jpg") ||
-  //           fileName.endsWith(".jpeg") ||
-  //           fileName.endsWith(".png") ||
-  //           fileName.endsWith(".gif") ||
-  //           fileName.endsWith(".webp");
-
-  //           console.warn("mimType:"+mimeType)
-
-  //         const isPDF = mimeType.includes("pdf") || fileName.endsWith(".pdf");
-  //         const isWord =
-  //           mimeType.includes("word") ||
-  //           fileName.endsWith(".doc") ||
-  //           fileName.endsWith(".docx");
-  //         const isExcel =
-  //           mimeType.includes("excel") ||
-  //           fileName.endsWith(".xls") ||
-  //           fileName.endsWith(".xlsx");
-
-  //         return (
-  //           // <View key={index} style={styles.attachmentRow}>
-  //           //   {isImage ? (
-  //           //     <Image
-  //           //       source={{ uri: file.uri }}
-  //           //       style={{
-  //           //         width: 40,
-  //           //         height: 40,
-  //           //         borderRadius: 4,
-  //           //         marginRight: Sizes.fixPadding,
-  //           //       }}
-  //           //     />
-  //           //   ) : (
-  //           //     <MaterialIcons
-  //           //       name={
-  //           //         isPDF
-  //           //           ? "picture-as-pdf"
-  //           //           : isWord
-  //           //           ? "article"
-  //           //           : isExcel
-  //           //           ? "grid-on"
-  //           //           : "insert-drive-file"
-  //           //       }
-  //           //       size={24}
-  //           //       color={Colors.primaryColor}
-  //           //       style={{ marginRight: Sizes.fixPadding }}
-  //           //     />
-  //           //   )}
-
-  //           //   <Text
-  //           //     style={{ ...Fonts.blackColor15Medium, flex: 1 }}
-  //           //     numberOfLines={1}
-  //           //   >
-  //           //     {file.name}
-  //           //   </Text>
-  //           // </View>
-  //           <View key={index} style={styles.attachmentRow}>
-  //             <TouchableOpacity
-  //               style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
-  //               onPress={() => WebBrowser.openBrowserAsync(file.uri)}
-  //             >
-  //               {isImage ? (
-  //                 <Image
-  //                   source={{ uri: file.uri }}
-  //                   style={{
-  //                     width: 40,
-  //                     height: 40,
-  //                     borderRadius: 4,
-  //                     marginRight: Sizes.fixPadding,
-  //                   }}
-  //                 />
-  //               ) : (
-  //                 <MaterialIcons
-  //                   name={
-  //                     isPDF
-  //                       ? "picture-as-pdf"
-  //                       : isWord
-  //                       ? "article"
-  //                       : isExcel
-  //                       ? "grid-on"
-  //                       : "insert-drive-file"
-  //                   }
-  //                   size={24}
-  //                   color={Colors.primaryColor}
-  //                   style={{ marginRight: Sizes.fixPadding }}
-  //                 />
-  //               )}
-
-  //               <Text
-  //                 style={{ ...Fonts.blackColor15Medium, flex: 1 }}
-  //                 numberOfLines={1}
-  //               >
-  //                 {file.name}
-  //               </Text>
-  //             </TouchableOpacity>
-  //           </View>
-  //         );
-  //       })}
-  //     </View>
-  //   );
   const attachmentsDisplay = () =>
     attachments.length > 0 && (
       <View
@@ -483,15 +329,6 @@ const AddNewScreen = ({ navigation, route }) => {
               >
                 <MaterialIcons name="close" size={24} color="green" />
               </TouchableOpacity>
-              {/* Download Button */}
-              {/* <TouchableOpacity onPress={() => handleDownload(file)}>
-                <MaterialIcons name="file-download" size={24} color="green" />
-              </TouchableOpacity> */}
-
-              {/* Share Button */}
-              {/* <TouchableOpacity onPress={() => handleShare(file)}>
-                <MaterialIcons name="share" size={24} color="blue" />
-              </TouchableOpacity> */}
             </View>
           );
         })}
@@ -519,199 +356,200 @@ const AddNewScreen = ({ navigation, route }) => {
     </TouchableOpacity>
   );
 
-  const calendarDialog = () => (
-    <Modal
-      animationType="slide"
-      transparent
-      visible={showCalendar}
-      onRequestClose={() => setShowCalendar(false)}
-    >
-      <TouchableOpacity
-        activeOpacity={1}
-        onPress={() => setShowCalendar(false)}
-        style={styles.modalBackground}
-      >
-        <View style={{ justifyContent: "center", flex: 1 }}>
-          <TouchableOpacity activeOpacity={1} style={styles.dialogStyle}>
-            <Calendar
-              monthFormat="MMMM yyyy"
-              renderArrow={(direction) =>
-                direction === "left" ? (
-                  <MaterialIcons
-                    name="arrow-back-ios"
-                    color={Colors.grayColor}
-                    size={18}
-                  />
-                ) : (
-                  <MaterialIcons
-                    name="arrow-forward-ios"
-                    color={Colors.grayColor}
-                    size={18}
-                  />
-                )
-              }
-              hideExtraDays
-              disableMonthChange
-              firstDay={1}
-              onPressArrowLeft={(subtractMonth) => subtractMonth()}
-              onPressArrowRight={(addMonth) => addMonth()}
-              enableSwipeMonths
-              dayComponent={({ date }) => (
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={() => {
-                    setSelectedDate(`${date.day}/${date.month}/${date.year}`);
-                    setDefaultDate(date.day);
-                  }}
-                  style={{
-                    ...styles.calenderDateWrapStyle,
-                    backgroundColor:
-                      date.day === defaultDate
-                        ? Colors.primaryColor
-                        : Colors.whiteColor,
-                  }}
-                >
-                  <Text
-                    style={
-                      date.day === defaultDate
-                        ? Fonts.whiteColor16SemiBold
-                        : Fonts.blackColor16Medium
-                    }
-                  >
-                    {date.day}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              theme={{
-                calendarBackground: Colors.whiteColor,
-                textSectionTitleColor: Colors.grayColor,
-                monthTextColor: Colors.blackColor,
-                textMonthFontFamily: "Poppins-SemiBold",
-                textDayHeaderFontFamily: "Poppins-SemiBold",
-                textMonthFontSize: 16,
-                textDayHeaderFontSize: 12,
-              }}
-            />
+  const handleAdd = async (values) => {
+    console.log("ddddd");
+    console.warn(values);
 
-            <View style={styles.dialogButtonWrapper}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => setShowCalendar(false)}
-                style={{
-                  ...styles.dialogButtonStyle,
-                  backgroundColor: Colors.whiteColor,
-                  marginRight: Sizes.fixPadding * 1.5,
-                }}
-              >
-                <Text style={Fonts.blackColor16SemiBold}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => {
-                  dateSelectionFor === "start"
-                    ? setStartingDate(selectedDate || todayDate)
-                    : setEndingDate(selectedDate || todayDate);
-                  setShowCalendar(false);
-                }}
-                style={{
-                  ...styles.dialogButtonStyle,
-                  backgroundColor: Colors.primaryColor,
-                }}
-              >
-                <Text style={Fonts.whiteColor16SemiBold}>Ok</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
+    if (from == "project") {
+      try {
+        let formData = new FormData();
+        for (let i = 0; i < attachments.length; i++) {
+          const file = attachments[i];
 
-  const handleAdd = async () => {
-    try {
-      let formData = new FormData();
+          const fileUri = file.uri;
+          const mimeType = getMimeType(file.name || file.uri);
+          const safeName =
+            file.name?.replace(/[^a-zA-Z0-9._-]/g, "_") ||
+            `file_${Date.now()}_${i}`;
+          if (!fileUri || !mimeType || !safeName) {
+            // console.warn(`❌ Skipping invalid file at index ${i}`, file);
+            continue;
+          }
 
-      // Optional: Append files if you have any
-      // attachments?.forEach((file, index) => {
-      //   formData.append("files", {
-      //     uri: file.uri,
-      //     name: file.name || `file_${index}`,
-      //     type: file.type || "application/octet-stream",
-      //   });
-      // });
-      for (let i = 0; i < attachments.length; i++) {
-        const file = attachments[i];
-
-        const fileUri = file.uri;
-        const mimeType = getMimeType(file.name || file.uri);
-        const safeName =
-          file.name?.replace(/[^a-zA-Z0-9._-]/g, "_") ||
-          `file_${Date.now()}_${i}`;
-
-        // console.log("✅ Final file info:", {
-        //   fileUri,
-        //   name: safeName,
-        //   type: mimeType,
-        // });
-
-        // If something critical is missing, skip the file
-        if (!fileUri || !mimeType || !safeName) {
-          // console.warn(`❌ Skipping invalid file at index ${i}`, file);
-          continue;
+          formData.append("files", {
+            uri: fileUri,
+            name: safeName,
+            type: mimeType,
+          });
         }
+        // Convert "dd/mm/yyyy" strings to ISO format "yyyy-MM-dd"
+        const parseDMY = (str) => {
+          const [day, month, year] = str.split("/").map(Number);
+          return new Date(year, month - 1, day); // JS months are 0-indexed
+        };
 
-        formData.append("files", {
-          uri: fileUri,
-          name: safeName,
-          type: mimeType,
+        const formatDate = (date) => {
+          const d = new Date(date);
+          const month = `${d.getMonth() + 1}`.padStart(2, "0");
+          const day = `${d.getDate()}`.padStart(2, "0");
+          const year = d.getFullYear();
+          return `${year}-${month}-${day}`;
+        };
+
+        const project = {
+          name: values?.projectName,
+          startDate: formatDate(parseDMY(values?.startingDate)),
+          // startDate:values?.startingDate,
+          endDate: formatDate(parseDMY(values?.endingDate)),
+          // endDate:values?.endingDate,
+          // team: selectedTeam,
+        };
+
+        formData.append("project", JSON.stringify(project));
+        console.warn(formData);
+        const response = await fetch(
+          "http://192.168.8.100:8080/api/v1/project/save",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        const result = await response.json();
+        console.log(result);
+
+        if (result.status === 200) {
+          Dialog.show({
+            type: ALERT_TYPE.SUCCESS,
+            title: "Success",
+            textBody: "Project Details has been added Successfully.",
+            button: "Close",
+            autoClose: 2000, // auto-close after 3 seconds
+            closeOnOverlayTap: true,
+          });
+          // Alert.alert("Success", "Project created successfully!");
+          setTimeout(() => {
+            navigation.goBack(); // or navigation.pop()
+          }, 2000);
+        } else {
+          // Show error dialog
+          Dialog.show({
+            type: ALERT_TYPE.DANGER,
+            title: "Error",
+            textBody: "Something went wrong!",
+            button: "Close",
+            autoClose: 3000,
+            closeOnOverlayTap: true,
+          });
+        }
+      } catch (err) {
+        console.error("Error creating project:", err);
+        // Show error dialog
+        Dialog.show({
+          type: ALERT_TYPE.DANGER,
+          title: "Error",
+          textBody: "Something went wrong!",
+          button: "Close",
+          autoClose: 3000,
+          closeOnOverlayTap: true,
         });
       }
-      // Convert "dd/mm/yyyy" strings to ISO format "yyyy-MM-dd"
-      const parseDMY = (str) => {
-        const [day, month, year] = str.split("/").map(Number);
-        return new Date(year, month - 1, day); // JS months are 0-indexed
-      };
+    } else {
+      console.warn(values);
+      try {
+        let formData = new FormData();
+        for (let i = 0; i < attachments.length; i++) {
+          const file = attachments[i];
 
-      const formatDate = (date) => {
-        const d = new Date(date);
-        const month = `${d.getMonth() + 1}`.padStart(2, "0");
-        const day = `${d.getDate()}`.padStart(2, "0");
-        const year = d.getFullYear();
-        return `${year}-${month}-${day}`;
-      };
+          const fileUri = file.uri;
+          const mimeType = getMimeType(file.name || file.uri);
+          const safeName =
+            file.name?.replace(/[^a-zA-Z0-9._-]/g, "_") ||
+            `file_${Date.now()}_${i}`;
+          if (!fileUri || !mimeType || !safeName) {
+            // console.warn(`❌ Skipping invalid file at index ${i}`, file);
+            continue;
+          }
 
-      const project = {
-        name: projectName,
-        startDate: formatDate(parseDMY(startingDate)), // e.g., "2025-08-29"
-        endDate: formatDate(parseDMY(endingDate)), // e.g., "2025-08-31"
-        team: selectedTeam,
-      };
-
-      formData.append("project", JSON.stringify(project));
-
-      const response = await fetch(
-        "http://192.168.8.103:8080/api/v1/project/save",
-        {
-          method: "POST",
-          body: formData,
+          formData.append("files", {
+            uri: fileUri,
+            name: safeName,
+            type: mimeType,
+          });
         }
-      );
+        // Convert "dd/mm/yyyy" strings to ISO format "yyyy-MM-dd"
+        const parseDMY = (str) => {
+          const [day, month, year] = str.split("/").map(Number);
+          return new Date(year, month - 1, day); // JS months are 0-indexed
+        };
 
-      const result = await response.json();
-      console.warn(result);
+        const formatDate = (date) => {
+          const d = new Date(date);
+          const month = `${d.getMonth() + 1}`.padStart(2, "0");
+          const day = `${d.getDate()}`.padStart(2, "0");
+          const year = d.getFullYear();
+          return `${year}-${month}-${day}`;
+        };
 
-      if (result.status === "200") {
-        Alert.alert("Success", "Project created successfully!");
-        navigation.pop();
-      } else {
-        Alert.alert(
-          "Failed",
-          result?.errorMessages?.[0] || "Please try again."
+        const project = {
+          name: values?.taskName,
+          // project: values?.selectedProject,
+          startDate: formatDate(parseDMY(values?.startingDate)),
+
+          // startDate:values?.startingDate,
+          endDate: formatDate(parseDMY(values?.endingDate)),
+          // endDate:values?.endingDate,
+          // team: selectedTeam,
+          project: values?.selectedProject?.projectId,
+        };
+        formData.append("task", JSON.stringify(project));
+        console.warn(formData);
+
+        const response = await fetch(
+          "http://192.168.8.100:8080/api/v1/task/save",
+          {
+            method: "POST",
+            body: formData,
+          }
         );
+
+        const result = await response.json();
+        console.log(result);
+
+        if (result.status === 200) {
+          Dialog.show({
+            type: ALERT_TYPE.SUCCESS,
+            title: "Success",
+            textBody: "Task Details has been added Successfully.",
+            button: "Close",
+            autoClose: 2000, // auto-close after 3 seconds
+            closeOnOverlayTap: true,
+          });
+          // Alert.alert("Success", "Project created successfully!");
+          setTimeout(() => {
+            navigation.goBack(); // or navigation.pop()
+          }, 2000);
+        } else {
+          Dialog.show({
+            type: ALERT_TYPE.DANGER,
+            title: "Error",
+            textBody: "Something went wrong!",
+            button: "Close",
+            autoClose: 3000,
+            closeOnOverlayTap: true,
+          });
+        }
+      } catch (err) {
+        console.error("Error creating project:", err);
+        Dialog.show({
+          type: ALERT_TYPE.DANGER,
+          title: "Error",
+          textBody: "Something went wrong!",
+          button: "Close",
+          autoClose: 3000,
+          closeOnOverlayTap: true,
+        });
       }
-    } catch (err) {
-      console.error("Error creating project:", err);
-      Alert.alert("Error", "Something went wrong. Try again later.");
     }
   };
 
@@ -737,323 +575,505 @@ const AddNewScreen = ({ navigation, route }) => {
   };
 
   // ---------- Form Fields ----------
-  const taskNameInfo = () => (
-    <View style={{ margin: Sizes.fixPadding * 2 }}>
-      <Text style={Fonts.blackColor16Medium}>Task name</Text>
-      <View style={styles.infoBox}>
-        <TextInput
-          value={taskName}
-          onChangeText={setTaskName}
-          placeholder="Enter task name"
-          placeholderTextColor={Colors.grayColor}
-          style={{ ...Fonts.blackColor15Medium, padding: 0 }}
-          cursorColor={Colors.primaryColor}
-          selectionColor={Colors.primaryColor}
-        />
-      </View>
-    </View>
-  );
-
-  // function projectNameInfo() {
-  //   return (
-  //     <View
-  //       style={{
-  //         marginHorizontal: Sizes.fixPadding * 2.0,
-  //         marginTop: from == "task" ? 0 : Sizes.fixPadding * 2.0,
-  //       }}
-  //     >
-  //       <Text style={{ ...Fonts.blackColor16Medium }}>Project name</Text>
-  //       <View style={styles.infoBox}>
-  //         <TextInput
-  //           value={projectName}
-  //           onChangeText={setprojectName}
-  //           placeholder="Enter project name"
-  //           placeholderTextColor={Colors.grayColor}
-  //           style={{ ...Fonts.blackColor15Medium, padding: 0 }}
-  //           cursorColor={Colors.primaryColor}
-  //           selectionColor={Colors.primaryColor}
-  //         />
-  //       </View>
-  //     </View>
-  //   );
-  // }
-  function projectNameInfo() {
-    return (
-      <View
-        style={{
-          marginHorizontal: Sizes.fixPadding * 2.0,
-          marginTop: from == "task" ? 0 : Sizes.fixPadding * 2.0,
-        }}
-      >
-        <Text style={{ ...Fonts.blackColor16Medium }}>Project name</Text>
-        <View style={styles.infoBox}>
-          <TextInput
-            value={projectName}
-            onChangeText={setprojectName}
-            placeholder="Enter project name"
-            placeholderTextColor={Colors.grayColor}
-            style={{ ...Fonts.blackColor15Medium, padding: 0 }}
-            cursorColor={Colors.primaryColor}
-            selectionColor={Colors.primaryColor}
-          />
-        </View>
-      </View>
-    );
-  }
-  const selectProject = () => (
-    <View style={{ marginHorizontal: Sizes.fixPadding * 2 }}>
-      <Text style={Fonts.blackColor16Medium}>Select Project</Text>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setShowProjectMenu(true)}
-        style={{ ...styles.infoBox, ...CommonStyles.rowAlignCenter }}
-      >
-        <Text
-          style={{
-            ...(selectedProject
-              ? Fonts.blackColor15Medium
-              : Fonts.grayColor15Medium),
-            flex: 1,
-          }}
-          numberOfLines={1}
-        >
-          {"Select Project"}
-        </Text>
-        <Menu
-          visible={showProjectMenu}
-          anchor={
-            <Ionicons name="chevron-down" color={Colors.grayColor} size={20} />
-          }
-          onRequestClose={() => setShowProjectMenu(false)}
-        >
-          <ScrollView
-            style={{ maxHeight: 200 }}
-            showsVerticalScrollIndicator={true}
-          >
-            {projectList.map((option, index) => (
-              <MenuItem
-                key={index}
-                onPress={() => {
-                  setSelectedProject(option);
-                  setShowProjectMenu(false);
-                }}
-              >
-                <Text style={Fonts.blackColor16Medium}>{option}</Text>
-              </MenuItem>
-            ))}
-          </ScrollView>
-        </Menu>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const startingDateInfo = () => (
-    <View style={{ margin: Sizes.fixPadding * 2 }}>
-      <Text style={Fonts.blackColor16Medium}>Starting date</Text>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => {
-          setDateSelectionFor("start");
-          setShowCalendar(true);
-        }}
-        style={{ ...styles.infoBox, paddingVertical: Sizes.fixPadding + 3 }}
-      >
-        <Text
-          style={
-            startingDate ? Fonts.blackColor15Medium : Fonts.grayColor15Medium
-          }
-        >
-          {startingDate || "Enter starting date"}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const endingDateInfo = () => (
-    <View
-      style={{
-        marginHorizontal: Sizes.fixPadding * 2,
-        marginTop: 0,
-      }}
-    >
-      <Text style={Fonts.blackColor16Medium}>Ending date</Text>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => {
-          setDateSelectionFor("end");
-          setShowCalendar(true);
-        }}
-        style={{ ...styles.infoBox, paddingVertical: Sizes.fixPadding + 3 }}
-      >
-        <Text
-          style={
-            endingDate ? Fonts.blackColor15Medium : Fonts.grayColor15Medium
-          }
-        >
-          {endingDate || "Enter ending date"}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const attachmentInfo = () => (
-    <View style={{ margin: Sizes.fixPadding * 2 }}>
-      <Text style={Fonts.blackColor16Medium}>Attachment</Text>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setShowAttachmentSheet(true)}
-        style={{ ...styles.infoBox, ...CommonStyles.rowAlignCenter }}
-      >
-        <View style={styles.attachmentIconWrapper}>
-          <MaterialIcons
-            name="attach-file"
-            size={18}
-            color={Colors.primaryColor}
-            style={{ transform: [{ rotate: "50deg" }] }}
-          />
-        </View>
-        <Text
-          style={{
-            ...Fonts.grayColor15Medium,
-            flex: 1,
-            marginLeft: Sizes.fixPadding,
-          }}
-          numberOfLines={1}
-        >
-          Attach file
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  function addButton() {
-    return (
-      <Button
-        buttonText={from == "task" ? "Add task" : "Add project"}
-        onPress={() => {
-          handleAdd();
-          // navigation.pop()
-        }}
-      />
-    );
-  }
-  const teamInfo = () => (
-    <View style={{ marginHorizontal: Sizes.fixPadding * 2 }}>
-      <Text style={Fonts.blackColor16Medium}>Select team</Text>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setShowMenu(true)}
-        style={{ ...styles.infoBox, ...CommonStyles.rowAlignCenter }}
-      >
-        <Text
-          style={{
-            ...(selectedTeam
-              ? Fonts.blackColor15Medium
-              : Fonts.grayColor15Medium),
-            flex: 1,
-          }}
-          numberOfLines={1}
-        >
-          {selectedTeam || "Select team"}
-        </Text>
-        <Menu
-          visible={showMenu}
-          anchor={
-            <Ionicons name="chevron-down" color={Colors.grayColor} size={20} />
-          }
-          onRequestClose={() => setShowMenu(false)}
-        >
-          <ScrollView
-            style={{ maxHeight: 200 }}
-            showsVerticalScrollIndicator={true}
-          >
-            {teamsList.map((option, index) => (
-              <MenuItem
-                key={index}
-                onPress={() => {
-                  setSelectedTeam(option);
-                  setShowMenu(false);
-                }}
-              >
-                <Text style={Fonts.blackColor16Medium}>{option}</Text>
-              </MenuItem>
-            ))}
-          </ScrollView>
-        </Menu>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const memberInfo = () => (
-    <View style={{ margin: Sizes.fixPadding * 2 }}>
-      <Text style={Fonts.blackColor16Medium}>Select team member</Text>
-      <Touchable
-        onPress={() =>
-          navigation.push("InviteMember", { inviteFor: "addTask" })
-        }
-        style={{ ...styles.infoBox, ...CommonStyles.rowAlignCenter }}
-      >
-        {selectedMembers.length === 0 ? (
-          <Text style={{ ...Fonts.grayColor15Medium, flex: 1 }}>
-            Select member
-          </Text>
-        ) : (
-          <View style={{ ...CommonStyles.rowAlignCenter, flex: 1 }}>
-            {selectedMembers.slice(0, 4).map((item, index) => (
-              <Image
-                key={index}
-                source={item.image}
-                style={{ ...styles.selectedMemberStyle, left: -(index * 6) }}
-              />
-            ))}
-            {selectedMembers.length > 4 && (
-              <View
-                style={{
-                  ...styles.selectedMemberStyle,
-                  ...CommonStyles.center,
-                  left: -25,
-                }}
-              >
-                <Text style={Fonts.blackColor12SemiBold}>
-                  +{selectedMembers.length - 4}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-        <View style={styles.addIconOuterCircle}>
-          <View style={styles.addIconInnerCircle}>
-            <MaterialIcons name="add" color={Colors.whiteColor} size={12} />
-          </View>
-        </View>
-      </Touchable>
-    </View>
-  );
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bodyBackColor }}>
-      <Header
-        header={from === "task" ? "Add new task" : "Add new project"}
-        navigation={navigation}
-      />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        automaticallyAdjustKeyboardInsets
-      >
-        {from === "task" && taskNameInfo()}
-        {projectNameInfo()}
-        {/* {projectNameInfo()} */}
-        {startingDateInfo()}
-        {endingDateInfo()}
-        {attachmentInfo()}
-        {attachmentsDisplay()}
-        {teamInfo()}
-        {memberInfo()}
-      </ScrollView>
-      {addButton()}
-      {calendarDialog()}
-      {attachmentSheet()}
-    </View>
+    <AlertNotificationRoot>
+      <View style={{ flex: 1, backgroundColor: Colors.bodyBackColor }}>
+        <Header
+          header={from === "task" ? "Add new task" : "Add new project"}
+          navigation={navigation}
+        />
+
+        <Formik
+          initialValues={{
+            taskName: "",
+            projectName: "",
+            startingDate: "",
+            endingDate: "",
+            selectedProject: null,
+            selectedTeam: "",
+          }}
+          validationSchema={validationSchema}
+          onSubmit={(values) => {
+            console.warn("dddddd");
+            console.warn("for:" + values);
+            handleAdd(values);
+          }}
+        >
+          {({
+            handleChange,
+            handleSubmit,
+            setFieldValue,
+            values,
+            errors,
+            touched,
+          }) => {
+            console.log(errors);
+
+            return (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                automaticallyAdjustKeyboardInsets
+              >
+                {/* {calendarDialog(setFieldValue)} */}
+                {from == "task" && (
+                  <View style={{ margin: Sizes.fixPadding * 2 }}>
+                    <Text style={Fonts.blackColor16Medium}>Task name</Text>
+                    <View style={styles.infoBox}>
+                      <TextInput
+                        // value={taskName}
+                        // onChangeText={setTaskName}
+                        value={values.taskName}
+                        onChangeText={handleChange("taskName")}
+                        placeholder="Enter task name"
+                        placeholderTextColor={Colors.grayColor}
+                        style={{ ...Fonts.blackColor15Medium, padding: 0 }}
+                        cursorColor={Colors.primaryColor}
+                        selectionColor={Colors.primaryColor}
+                      />
+                    </View>
+                    {touched.taskName && errors.taskName && (
+                      <Text style={{ color: "red", fontSize: 12 }}>
+                        {errors.taskName}
+                      </Text>
+                    )}
+                  </View>
+                )}
+
+                {from == "task" && (
+                  <View style={{ marginHorizontal: Sizes.fixPadding * 2.0 }}>
+                    <Text style={{ ...Fonts.blackColor16Medium }}>
+                      Select Project
+                    </Text>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setShowMenu(true);
+                      }}
+                      style={{
+                        ...styles.infoBox,
+                        ...CommonStyles.rowAlignCenter,
+                      }}
+                    >
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          ...(values?.selectedProject
+                            ? { ...Fonts.blackColor15Medium }
+                            : { ...Fonts.grayColor15Medium }),
+                          flex: 1,
+                        }}
+                      >
+                        {values.selectedProject
+                          ? values.selectedProject?.name
+                          : "Select project"}
+                      </Text>
+                      <Menu
+                        visible={showMenu}
+                        anchor={
+                          <Ionicons
+                            name="chevron-down"
+                            color={Colors.grayColor}
+                            size={20}
+                          />
+                        }
+                        onRequestClose={() => {
+                          setShowMenu(false);
+                        }}
+                      >
+                        <View
+                          style={{
+                            paddingTop: Sizes.fixPadding - 5.0,
+                            borderRadius: Sizes.fixPadding,
+                          }}
+                        >
+                          <ScrollView showsVerticalScrollIndicator={false}>
+                            {selectedProject.map((option, index) => (
+                              <MenuItem
+                                key={`${index}`}
+                                textStyle={{ ...Fonts.blackColor16Medium }}
+                                onPress={() => {
+                                  setFieldValue("selectedProject", option);
+                                  setSelectedTeam(option);
+                                  setShowMenu(false);
+                                }}
+                              >
+                                {option.name}
+                              </MenuItem>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      </Menu>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {from == "project" && (
+                  <View
+                    style={{
+                      marginHorizontal: Sizes.fixPadding * 2.0,
+                      marginTop:
+                        from == "task"
+                          ? Sizes.fixPadding * 2.0
+                          : Sizes.fixPadding * 2.0,
+                    }}
+                  >
+                    <Text style={{ ...Fonts.blackColor16Medium }}>
+                      Project name
+                    </Text>
+                    <View style={styles.infoBox}>
+                      <TextInput
+                        value={values.projectName}
+                        onChangeText={handleChange("projectName")}
+                        placeholder="Enter project name"
+                        placeholderTextColor={Colors.grayColor}
+                        style={{ ...Fonts.blackColor15Medium, padding: 0 }}
+                        cursorColor={Colors.primaryColor}
+                        selectionColor={Colors.primaryColor}
+                      />
+                    </View>
+                    {touched.projectName && errors.projectName && (
+                      <Text style={{ color: "red", fontSize: 12 }}>
+                        {errors.projectName}
+                      </Text>
+                    )}
+                  </View>
+                )}
+                {/* {from === "task" && taskNameInfo()} */}
+                {/* {projectNameInfo()} */}
+                {/* {projectNameInfo()} */}
+                {/* {startingDateInfo()} */}
+                <View style={{ margin: Sizes.fixPadding * 2 }}>
+                  <Text style={Fonts.blackColor16Medium}>Starting date</Text>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setDateSelectionFor("start");
+                      setShowCalendar(true);
+                    }}
+                    style={{
+                      ...styles.infoBox,
+                      paddingVertical: Sizes.fixPadding + 3,
+                    }}
+                  >
+                    <Text
+                      style={
+                        values.startingDate
+                          ? Fonts.blackColor15Medium
+                          : Fonts.grayColor15Medium
+                      }
+                    >
+                      {values.startingDate || "Enter starting date"}
+                    </Text>
+                  </TouchableOpacity>
+                  {touched.startingDate && errors.startingDate && (
+                    <Text style={{ color: "red", fontSize: 12 }}>
+                      {errors.startingDate}
+                    </Text>
+                  )}
+                </View>
+                <View
+                  style={{
+                    marginHorizontal: Sizes.fixPadding * 2,
+                    marginTop: 0,
+                  }}
+                >
+                  <Text style={Fonts.blackColor16Medium}>Ending date</Text>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setDateSelectionFor("end");
+                      setShowCalendar(true);
+                    }}
+                    style={{
+                      ...styles.infoBox,
+                      paddingVertical: Sizes.fixPadding + 3,
+                    }}
+                  >
+                    <Text
+                      style={
+                        values.endingDate
+                          ? Fonts.blackColor15Medium
+                          : Fonts.grayColor15Medium
+                      }
+                    >
+                      {values.endingDate || "Enter ending date"}
+                    </Text>
+                  </TouchableOpacity>
+                  {touched.endingDate && errors.endingDate && (
+                    <Text style={{ color: "red", fontSize: 12 }}>
+                      {errors.endingDate}
+                    </Text>
+                  )}
+                </View>
+                {/* {endingDateInfo()} */}
+                {/* {attachmentInfo()} */}
+                <View style={{ margin: Sizes.fixPadding * 2 }}>
+                  <Text style={Fonts.blackColor16Medium}>Attachment</Text>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => setShowAttachmentSheet(true)}
+                    style={{
+                      ...styles.infoBox,
+                      ...CommonStyles.rowAlignCenter,
+                    }}
+                  >
+                    <View style={styles.attachmentIconWrapper}>
+                      <MaterialIcons
+                        name="attach-file"
+                        size={18}
+                        color={Colors.primaryColor}
+                        style={{ transform: [{ rotate: "50deg" }] }}
+                      />
+                    </View>
+                    <Text
+                      style={{
+                        ...Fonts.grayColor15Medium,
+                        flex: 1,
+                        marginLeft: Sizes.fixPadding,
+                      }}
+                      numberOfLines={1}
+                    >
+                      Attach file
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {attachmentsDisplay()}
+                {/* {teamInfo()} */}
+                {/* <View style={{ marginHorizontal: Sizes.fixPadding * 2 }}>
+              <Text style={Fonts.blackColor16Medium}>Select team</Text>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setShowMenu(true)}
+                style={{ ...styles.infoBox, ...CommonStyles.rowAlignCenter }}
+              >
+                <Text
+                  style={{
+                    ...(selectedTeam
+                      ? Fonts.blackColor15Medium
+                      : Fonts.grayColor15Medium),
+                    flex: 1,
+                  }}
+                  numberOfLines={1}
+                >
+                  {selectedTeam || "Select team"}
+                </Text>
+                <Menu
+                  visible={showMenu}
+                  anchor={
+                    <Ionicons
+                      name="chevron-down"
+                      color={Colors.grayColor}
+                      size={20}
+                    />
+                  }
+                  onRequestClose={() => setShowMenu(false)}
+                >
+                  <ScrollView
+                    style={{ maxHeight: 200 }}
+                    showsVerticalScrollIndicator={true}
+                  >
+                    {teamsList.map((option, index) => (
+                      <MenuItem
+                        key={index}
+                        onPress={() => {
+                          setSelectedTeam(option);
+                          setShowMenu(false);
+                        }}
+                      >
+                        <Text style={Fonts.blackColor16Medium}>{option}</Text>
+                      </MenuItem>
+                    ))}
+                  </ScrollView>
+                </Menu>
+              </TouchableOpacity>
+            </View> */}
+
+                <View style={{ margin: Sizes.fixPadding * 2 }}>
+                  <Text style={Fonts.blackColor16Medium}>
+                    Select team member
+                  </Text>
+                  <Touchable
+                    onPress={() =>
+                      navigation.push("InviteMember", { inviteFor: "addTask" })
+                    }
+                    style={{
+                      ...styles.infoBox,
+                      ...CommonStyles.rowAlignCenter,
+                    }}
+                  >
+                    {selectedMembers.length === 0 ? (
+                      <Text style={{ ...Fonts.grayColor15Medium, flex: 1 }}>
+                        Select member
+                      </Text>
+                    ) : (
+                      <View style={{ ...CommonStyles.rowAlignCenter, flex: 1 }}>
+                        {selectedMembers.slice(0, 4).map((item, index) => (
+                          <Image
+                            key={index}
+                            source={item.image}
+                            style={{
+                              ...styles.selectedMemberStyle,
+                              left: -(index * 6),
+                            }}
+                          />
+                        ))}
+                        {selectedMembers.length > 4 && (
+                          <View
+                            style={{
+                              ...styles.selectedMemberStyle,
+                              ...CommonStyles.center,
+                              left: -25,
+                            }}
+                          >
+                            <Text style={Fonts.blackColor12SemiBold}>
+                              +{selectedMembers.length - 4}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                    <View style={styles.addIconOuterCircle}>
+                      <View style={styles.addIconInnerCircle}>
+                        <MaterialIcons
+                          name="add"
+                          color={Colors.whiteColor}
+                          size={12}
+                        />
+                      </View>
+                    </View>
+                  </Touchable>
+                </View>
+                {/* {memberInfo()} */}
+                <Button
+                  buttonText={from == "task" ? "Add task" : "Add project"}
+                  onPress={handleSubmit}
+                />
+
+                {/* {addButton()} */}
+                {/* {calendarDialog()} */}
+                {attachmentSheet()}
+
+                <Modal
+                  animationType="slide"
+                  transparent
+                  visible={showCalendar}
+                  onRequestClose={() => setShowCalendar(false)}
+                >
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setShowCalendar(false)}
+                    style={styles.modalBackground}
+                  >
+                    <View style={{ justifyContent: "center", flex: 1 }}>
+                      <TouchableOpacity
+                        activeOpacity={1}
+                        style={styles.dialogStyle}
+                      >
+                        <Calendar
+                          monthFormat="MMMM yyyy"
+                          renderArrow={(direction) =>
+                            direction === "left" ? (
+                              <MaterialIcons
+                                name="arrow-back-ios"
+                                color={Colors.grayColor}
+                                size={18}
+                              />
+                            ) : (
+                              <MaterialIcons
+                                name="arrow-forward-ios"
+                                color={Colors.grayColor}
+                                size={18}
+                              />
+                            )
+                          }
+                          hideExtraDays
+                          disableMonthChange
+                          firstDay={1}
+                          onPressArrowLeft={(subtractMonth) => subtractMonth()}
+                          onPressArrowRight={(addMonth) => addMonth()}
+                          enableSwipeMonths
+                          dayComponent={({ date }) => (
+                            <TouchableOpacity
+                              activeOpacity={0.9}
+                              onPress={() => {
+                                setSelectedDate(
+                                  `${date.day}/${date.month}/${date.year}`
+                                );
+                                setDefaultDate(date.day);
+                              }}
+                              style={{
+                                ...styles.calenderDateWrapStyle,
+                                backgroundColor:
+                                  date.day === defaultDate
+                                    ? Colors.primaryColor
+                                    : Colors.whiteColor,
+                              }}
+                            >
+                              <Text
+                                style={
+                                  date.day === defaultDate
+                                    ? Fonts.whiteColor16SemiBold
+                                    : Fonts.blackColor16Medium
+                                }
+                              >
+                                {date.day}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                          theme={{
+                            calendarBackground: Colors.whiteColor,
+                            textSectionTitleColor: Colors.grayColor,
+                            monthTextColor: Colors.blackColor,
+                            textMonthFontFamily: "Poppins-SemiBold",
+                            textDayHeaderFontFamily: "Poppins-SemiBold",
+                            textMonthFontSize: 16,
+                            textDayHeaderFontSize: 12,
+                          }}
+                        />
+
+                        <View style={styles.dialogButtonWrapper}>
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => setShowCalendar(false)}
+                            style={{
+                              ...styles.dialogButtonStyle,
+                              backgroundColor: Colors.whiteColor,
+                              marginRight: Sizes.fixPadding * 1.5,
+                            }}
+                          >
+                            <Text style={Fonts.blackColor16SemiBold}>
+                              Cancel
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => {
+                              const chosenDate = selectedDate || todayDate;
+                              if (dateSelectionFor === "start") {
+                                setFieldValue("startingDate", chosenDate); // ✅ set Formik value
+                              } else {
+                                setFieldValue("endingDate", chosenDate); // ✅ set Formik value
+                              }
+                              setShowCalendar(false);
+                            }}
+                            style={{
+                              ...styles.dialogButtonStyle,
+                              backgroundColor: Colors.primaryColor,
+                            }}
+                          >
+                            <Text style={Fonts.whiteColor16SemiBold}>Ok</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
+              </ScrollView>
+            );
+          }}
+        </Formik>
+      </View>
+    </AlertNotificationRoot>
   );
 };
 
