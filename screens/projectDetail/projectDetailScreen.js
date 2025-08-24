@@ -27,6 +27,7 @@ import * as Progress from "react-native-progress";
 import { TabView, TabBar } from "react-native-tab-view";
 import TaskDeleteDialog from "../../components/taskDeleteDialog";
 import { Menu, MenuItem } from "react-native-material-menu";
+import TaskCompleteDialog from "../../components/taskCompleteDialog";
 
 // const optionsList = ['Delete project', 'Share project', 'Copy link', 'Complete Project'];
 
@@ -153,7 +154,7 @@ const commentsList = [
   {
     id: "2",
     image: require("../../assets/images/users/user3.png"),
-    name: "Robert Fox",
+    name: "Nipuni Madushani",
     profession: "Back-end developer",
     time: "1 hour ago",
     comment:
@@ -227,6 +228,7 @@ const ProjectDetailScreen = ({ navigation, route }) => {
     { key: "forth", title: "Comments" },
   ];
   const [showDeleteDialog, setshowDeleteDialog] = useState(false);
+    const [showCompleteDialog, setshowCompleteDialog] = useState(false);
   const [showMenu, setshowMenu] = useState(false);
   const [teamMembers, setteamMembers] = useState(teamsList);
 
@@ -239,6 +241,7 @@ const ProjectDetailScreen = ({ navigation, route }) => {
       {projectDetail()}
       {tabBarInfo()}
       {deleteDialog()}
+         {completeDialog()}
     </KeyboardAvoidingView>
   );
 
@@ -257,6 +260,26 @@ const ProjectDetailScreen = ({ navigation, route }) => {
             params: { id: item.id, category: category },
             merge: true,
           });
+        }}
+      />
+    );
+  }
+
+    function completeDialog() {
+    return (
+      <TaskCompleteDialog
+        visible={showCompleteDialog}
+        setVisible={() => {
+          setshowCompleteDialog(false);
+        }}
+        message="Are you sure you want to complete this project"
+        onDelete={() => {
+          setshowCompleteDialog(false);
+          // navigation.navigate({
+          //   name: "Project",
+          //   params: { id: item.id, category: category },
+          //   merge: true,
+          // });
         }}
       />
     );
@@ -411,12 +434,22 @@ const ProjectDetailScreen = ({ navigation, route }) => {
                             }, 400)
                           : setshowDeleteDialog(true);
                       }
+
+                       if (index == 3) {
+                        Platform.OS == "ios"
+                          ? setTimeout(() => {
+                              setshowCompleteDialog(true);
+                            }, 400)
+                          : setshowCompleteDialog(true);
+                      }
                       setshowMenu(false);
                     }}
                   >
                     {option}
                   </MenuItem>
                 ))}
+
+                
               </View>
             </Menu>
           </View>

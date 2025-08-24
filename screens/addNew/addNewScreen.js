@@ -32,6 +32,7 @@ import {
   Dialog,
   Toast,
 } from "react-native-alert-notification";
+import { API_URL } from "@env";
 const AddNewScreen = ({ navigation, route }) => {
   const from = route.params.from;
   const todayDate = new Date().toLocaleDateString();
@@ -59,9 +60,13 @@ const AddNewScreen = ({ navigation, route }) => {
       const fetchProjects = async () => {
         console.warn("calledeee...");
         try {
+          const url = `${API_URL}/project/`;
+          console.log("Fetching from:", url);
+
+          // const response = await fetch(`${API_URL}/project/`); // change localhost to your backend IP if using mobile
           const response = await fetch(
-            "http://192.168.8.100:8080/api/v1/project/"
-          ); // change localhost to your backend IP if using mobile
+            "http:192.168.8.103:8080/api/v1/project/"
+          );
           const result = await response.json();
           // console.warn(result);
 
@@ -407,8 +412,9 @@ const AddNewScreen = ({ navigation, route }) => {
 
         formData.append("project", JSON.stringify(project));
         console.warn(formData);
+        // const response = await fetch("http:192.168.8.103:8080/api/v1/project/");
         const response = await fetch(
-          "http://192.168.8.100:8080/api/v1/project/save",
+          "http:192.168.8.103:8080/api/v1/project/save",
           {
             method: "POST",
             body: formData,
@@ -429,7 +435,7 @@ const AddNewScreen = ({ navigation, route }) => {
           });
           // Alert.alert("Success", "Project created successfully!");
           setTimeout(() => {
-             navigation.pop(); // or navigation.pop()
+            navigation.pop(); // or navigation.pop()
           }, 2000);
         } else {
           // Show error dialog
@@ -505,13 +511,10 @@ const AddNewScreen = ({ navigation, route }) => {
         formData.append("task", JSON.stringify(project));
         console.warn(formData);
 
-        const response = await fetch(
-          "http://192.168.8.100:8080/api/v1/task/save",
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
+        const response = await fetch("http:192.168.8.103/api/v1/task/save", {
+          method: "POST",
+          body: formData,
+        });
 
         const result = await response.json();
         console.log(result);

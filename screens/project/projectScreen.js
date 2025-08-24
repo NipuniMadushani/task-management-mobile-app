@@ -174,7 +174,7 @@ const ProjectScreen = ({ navigation, route }) => {
         let projectStatus = "PENDING";
         try {
           const response = await fetch(
-            `http://192.168.8.100:8080/api/v1/project/active/${projectStatus}`
+            `http:192.168.8.103:8080/api/v1/project/active/${projectStatus}`
           );
           const result = await response.json();
 

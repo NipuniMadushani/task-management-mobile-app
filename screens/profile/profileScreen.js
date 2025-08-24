@@ -255,7 +255,7 @@ const ProfileScreen = ({ navigation }) => {
         />
         <View style={{ flex: 1, marginHorizontal: Sizes.fixPadding + 5.0 }}>
           <Text numberOfLines={1} style={{ ...Fonts.blackColor16SemiBold }}>
-            Robert fox
+            Nipuni Madushani
           </Text>
           <Text numberOfLines={1} style={{ ...Fonts.grayColor14SemiBold }}>
             20 task/10 completed
@@ -301,7 +301,7 @@ const ProfileScreen = ({ navigation }) => {
                 numberOfLines={1}
                 style={{ ...Fonts.whiteColor16Medium, opacity: 0.8 }}
               >
-                Hello robert fox
+                Hello Nipuni Madushani
               </Text>
             </View>
             <View style={{ height: 95, justifyContent: "flex-end" }}>
