@@ -98,7 +98,7 @@ const AddNewScreen = ({ navigation, route }) => {
         } catch (error) {
           console.error("Error fetching projects:", error);
         } finally {
-          setLoading(false);
+          setisLoading(false);
         }
       };
 
@@ -134,6 +134,16 @@ const AddNewScreen = ({ navigation, route }) => {
               const [year, month, day] = dateStr.split("-"); // "2025-08-14" → ["2025","08","14"]
               return `${day}/${month}/${year}`;
             };
+            console.warn(values.attachments);
+            // Map backend attachments into your frontend format
+            const savedAttachments = (values.attachments || []).map(
+              (att, index) => ({
+                name: att.imageOriginalName || `file_${index}`, // backend field
+                uri: "http://192.168.8.102:8080/uploads/" + att.filePath, // build correct URL
+                type: att.fileType || "application/octet-stream",
+                // saved: true, // mark as already saved
+              })
+            );
             const initialValues = {
               // taskName: "",
               projectName: values?.name,
@@ -148,6 +158,7 @@ const AddNewScreen = ({ navigation, route }) => {
             };
             console.warn(initialValues);
             setLoadValues(initialValues);
+            setAttachments(savedAttachments);
             // const projectNames = result.payload[0].map((item) => item.name);
             // console.warn(projectNames);
             // setSelectedProject(result.payload[0]); // because payload is wrapped in a list
@@ -331,10 +342,10 @@ const AddNewScreen = ({ navigation, route }) => {
               option: "Gallery",
               onPress: () => {
                 setShowAttachmentSheet(false);
-                setTimeout(openGallery, 300);
+                setTimeout(openDocumentPicker, 300);
               },
             })}
-            {optionSort({
+            {/* {optionSort({
               iconName: "folder",
               color: Colors.darkOrangeColor,
               option: "Files",
@@ -342,7 +353,7 @@ const AddNewScreen = ({ navigation, route }) => {
                 setShowAttachmentSheet(false);
                 setTimeout(openDocumentPicker, 300);
               },
-            })}
+            })} */}
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -490,6 +501,13 @@ const AddNewScreen = ({ navigation, route }) => {
       </Modal>
     );
   }
+
+  async function downloadToCache(url, filename) {
+    const localUri = `${FileSystem.cacheDirectory}${filename}`;
+    const { uri } = await FileSystem.downloadAsync(url, localUri);
+    console.log("✅ Downloaded to:", uri);
+    return uri; // something like file:///data/user/0/host.exp.exponent/cache/...pdf
+  }
   const handleAdd = async (values) => {
     console.log("ddddd");
     console.warn(values);
@@ -500,9 +518,12 @@ const AddNewScreen = ({ navigation, route }) => {
         let formData = new FormData();
         for (let i = 0; i < attachments.length; i++) {
           const file = attachments[i];
-
-          const fileUri = file.uri;
+          // if (file.saved) continue;
+          const localUri = await downloadToCache(file.uri, file.name);
+          const fileUri = localUri;
+          console.warn(fileUri);
           const mimeType = getMimeType(file.name || file.uri);
+          console.warn(mimeType);
           const safeName =
             file.name?.replace(/[^a-zA-Z0-9._-]/g, "_") ||
             `file_${Date.now()}_${i}`;
@@ -510,6 +531,7 @@ const AddNewScreen = ({ navigation, route }) => {
             // console.warn(`❌ Skipping invalid file at index ${i}`, file);
             continue;
           }
+          console.warn(safeName);
 
           formData.append("files", {
             uri: fileUri,
@@ -517,6 +539,7 @@ const AddNewScreen = ({ navigation, route }) => {
             type: mimeType,
           });
         }
+        console.warn(formData);
         // Convert "dd/mm/yyyy" strings to ISO format "yyyy-MM-dd"
         const parseDMY = (str) => {
           const [day, month, year] = str.split("/").map(Number);
@@ -545,7 +568,7 @@ const AddNewScreen = ({ navigation, route }) => {
         };
 
         formData.append("project", JSON.stringify(project));
-        console.warn(formData);
+        // console.warn(formData);
         // const response = await fetch("http:192.168.8.102:8080/api/v1/project/");
         const response = await fetch(
           "http:192.168.8.102:8080/api/v1/project/save",
@@ -989,55 +1012,6 @@ const AddNewScreen = ({ navigation, route }) => {
                   </TouchableOpacity>
                 </View>
                 {attachmentsDisplay()}
-                {/* {teamInfo()} */}
-                {/* <View style={{ marginHorizontal: Sizes.fixPadding * 2 }}>
-              <Text style={Fonts.blackColor16Medium}>Select team</Text>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => setShowMenu(true)}
-                style={{ ...styles.infoBox, ...CommonStyles.rowAlignCenter }}
-              >
-                <Text
-                  style={{
-                    ...(selectedTeam
-                      ? Fonts.blackColor15Medium
-                      : Fonts.grayColor15Medium),
-                    flex: 1,
-                  }}
-                  numberOfLines={1}
-                >
-                  {selectedTeam || "Select team"}
-                </Text>
-                <Menu
-                  visible={showMenu}
-                  anchor={
-                    <Ionicons
-                      name="chevron-down"
-                      color={Colors.grayColor}
-                      size={20}
-                    />
-                  }
-                  onRequestClose={() => setShowMenu(false)}
-                >
-                  <ScrollView
-                    style={{ maxHeight: 200 }}
-                    showsVerticalScrollIndicator={true}
-                  >
-                    {teamsList.map((option, index) => (
-                      <MenuItem
-                        key={index}
-                        onPress={() => {
-                          setSelectedTeam(option);
-                          setShowMenu(false);
-                        }}
-                      >
-                        <Text style={Fonts.blackColor16Medium}>{option}</Text>
-                      </MenuItem>
-                    ))}
-                  </ScrollView>
-                </Menu>
-              </TouchableOpacity>
-            </View> */}
 
                 <View style={{ margin: Sizes.fixPadding * 2 }}>
                   <Text style={Fonts.blackColor16Medium}>
