@@ -174,7 +174,7 @@ const ProjectScreen = ({ navigation, route }) => {
         let projectStatus = "PENDING";
         try {
           const response = await fetch(
-            `http:192.168.8.103:8080/api/v1/project/active/${projectStatus}`
+            `http:192.168.8.102:8080/api/v1/project/active/${projectStatus}`
           );
           const result = await response.json();
 
@@ -189,8 +189,8 @@ const ProjectScreen = ({ navigation, route }) => {
                 month: "short",
                 year: "numeric",
               }),
-              taskCount: p.taskCount ? `${p.taskCount} task` : "0 task",
-              progress: p.progress || 0,
+              taskCount: p.taskCount ? `${p.taskCount} task` : "5 task",
+              progress: p.progress || 30,
               members: dummyMembers.slice(0, p.membersCount || 5),
               fill: Colors.tomatoColor,
               unfill: "rgba(218, 152, 135, 0.16)",
@@ -232,6 +232,7 @@ const ProjectScreen = ({ navigation, route }) => {
       {projectAndTaskInfo()}
       {tabBarInfo()}
       {addButton()}
+      
     </View>
   );
 
@@ -549,6 +550,8 @@ const Active = (props) => {
             <Text numberOfLines={1} style={{ ...Fonts.blackColor16Medium }}>
               {item.title}
             </Text>
+
+            
             <View
               style={{
                 ...CommonStyles.rowAlignCenter,
@@ -589,6 +592,22 @@ const Active = (props) => {
                 >
                   {item.taskCount}
                 </Text>
+                <Touchable
+              onPress={() => {
+                props.navigation.push("AddNew", {
+                  from: "project",
+                  mode: "edit",
+                  project: item,
+                });
+              }}
+              // style={{ marginHorizontal: }}
+            >
+              <MaterialIcons
+                name="edit"
+                size={22}
+                color={Colors.primaryColor}
+              />
+            </Touchable>
               </View>
             </View>
           </View>

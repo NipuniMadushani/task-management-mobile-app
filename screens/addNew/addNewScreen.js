@@ -33,8 +33,12 @@ import {
   Toast,
 } from "react-native-alert-notification";
 import { API_URL } from "@env";
+import { Circle } from "react-native-animated-spinkit";
 const AddNewScreen = ({ navigation, route }) => {
   const from = route.params.from;
+  const mode = route.params.mode;
+  const item = route.params.project;
+  // console.warn(item);
   const todayDate = new Date().toLocaleDateString();
 
   const [taskName, setTaskName] = useState("");
@@ -52,20 +56,32 @@ const AddNewScreen = ({ navigation, route }) => {
   const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [projectName, setprojectName] = useState("");
+  const [isLoading, setisLoading] = useState(false);
   // const [teamsList,setTeamList] = useState([]);
 
+  const initialValues = {
+    taskName: "",
+    projectName: "",
+    startingDate: "",
+    endingDate: "",
+    selectedProject: null,
+    selectedTeam: "",
+    projectStatus: "",
+    status: true,
+  };
+  const [loadValues, setLoadValues] = useState(null);
   useEffect(() => {
     console.warn("called...");
     if (from === "task") {
       const fetchProjects = async () => {
         console.warn("calledeee...");
         try {
-          const url = `${API_URL}/project/`;
-          console.log("Fetching from:", url);
+          // const url = `${API_URL}/project/`;
+          // console.log(url);
 
           // const response = await fetch(`${API_URL}/project/`); // change localhost to your backend IP if using mobile
           const response = await fetch(
-            "http:192.168.8.103:8080/api/v1/project/"
+            "http:192.168.8.102:8080/api/v1/project/"
           );
           const result = await response.json();
           // console.warn(result);
@@ -90,6 +106,66 @@ const AddNewScreen = ({ navigation, route }) => {
     }
   }, []);
 
+  useEffect(() => {
+    // console.warn(mode,from);
+    if (mode == "edit" && from == "project") {
+      const fetchProjects = async () => {
+        setisLoading(true);
+        console.warn(item);
+        console.warn("get existing project...");
+        try {
+          const projectId = item?.id;
+          // const url = `${API_URL}/project/`;
+          // console.log(url);
+
+          // const response = await fetch(`${API_URL}/project/`); // change localhost to your backend IP if using mobile
+          const response = await fetch(
+            `http:192.168.8.102:8080/api/v1/project/${projectId}`
+          );
+          const result = await response.json();
+          // console.warn(result);
+
+          if (result.status === 200) {
+            setisLoading(false);
+            console.warn("Suucess ooo");
+            const values = result.payload[0];
+            const formatDate = (dateStr) => {
+              if (!dateStr) return "";
+              const [year, month, day] = dateStr.split("-"); // "2025-08-14" → ["2025","08","14"]
+              return `${day}/${month}/${year}`;
+            };
+            const initialValues = {
+              // taskName: "",
+              projectName: values?.name,
+              startingDate: values?.startDate
+                ? formatDate(values.startDate)
+                : "",
+              endingDate: values?.endDate ? formatDate(values.endDate) : "",
+              projectStatus: values?.projectStatus,
+              status: values?.status,
+              // selectedProject: null,
+              selectedTeam: "",
+            };
+            console.warn(initialValues);
+            setLoadValues(initialValues);
+            // const projectNames = result.payload[0].map((item) => item.name);
+            // console.warn(projectNames);
+            // setSelectedProject(result.payload[0]); // because payload is wrapped in a list
+          } else {
+            console.warn(result.errorMessages?.[0] || "No records found");
+          }
+        } catch (error) {
+          setisLoading(false);
+          console.error("Error fetching projects:", error);
+        } finally {
+          setisLoading(false);
+        }
+      };
+
+      fetchProjects();
+    }
+  }, []);
+
   const teamsList = [
     "Designer team",
     "Developer team",
@@ -107,7 +183,27 @@ const AddNewScreen = ({ navigation, route }) => {
         ? Yup.string().required("Project name is required")
         : Yup.string(),
     startingDate: Yup.string().required("Starting date is required"),
-    endingDate: Yup.string().required("Ending date is required"),
+    endingDate: Yup.string()
+      .required("Ending date is required")
+      .test(
+        "is-after-start",
+        "Ending date cannot be before starting date",
+        function (value) {
+          const { startingDate } = this.parent;
+          if (!startingDate || !value) return true;
+
+          // Parse dd/mm/yyyy → Date
+          const [startDay, startMonth, startYear] = startingDate
+            .split("/")
+            .map(Number);
+          const [endDay, endMonth, endYear] = value.split("/").map(Number);
+
+          const startDateObj = new Date(startYear, startMonth - 1, startDay);
+          const endDateObj = new Date(endYear, endMonth - 1, endDay);
+
+          return endDateObj >= startDateObj;
+        }
+      ),
     // selectedProject:
     //   from === "task"
     //     ? Yup.string().required("Project selection is required")
@@ -360,10 +456,44 @@ const AddNewScreen = ({ navigation, route }) => {
       </Text>
     </TouchableOpacity>
   );
-
+  function loadingDialog() {
+    return (
+      <Modal animationType="fade" transparent={true} visible={isLoading}>
+        <TouchableOpacity
+          activeOpacity={1}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
+          <View style={{ justifyContent: "center", flex: 1 }}>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => {}}
+              style={styles.dialogStyle}
+            >
+              <View style={{ ...CommonStyles.center }}>
+                <Circle
+                  size={50}
+                  color={Colors.primaryColor}
+                  style={{ marginTop: Sizes.fixPadding - 5.0 }}
+                />
+                <Text
+                  style={{
+                    ...Fonts.primaryColor20Medium,
+                    marginTop: Sizes.fixPadding + 2.0,
+                  }}
+                >
+                  Please wait
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  }
   const handleAdd = async (values) => {
     console.log("ddddd");
     console.warn(values);
+    setisLoading(true);
 
     if (from == "project") {
       try {
@@ -402,19 +532,23 @@ const AddNewScreen = ({ navigation, route }) => {
         };
 
         const project = {
+          projectId: mode == "edit" ? item?.id : "",
+
           name: values?.projectName,
           startDate: formatDate(parseDMY(values?.startingDate)),
           // startDate:values?.startingDate,
           endDate: formatDate(parseDMY(values?.endingDate)),
+          projectStatus: mode == "edit" ? values?.projectStatus : "PENDING",
+          // status:mode=="edit"?
           // endDate:values?.endingDate,
           // team: selectedTeam,
         };
 
         formData.append("project", JSON.stringify(project));
         console.warn(formData);
-        // const response = await fetch("http:192.168.8.103:8080/api/v1/project/");
+        // const response = await fetch("http:192.168.8.102:8080/api/v1/project/");
         const response = await fetch(
-          "http:192.168.8.103:8080/api/v1/project/save",
+          "http:192.168.8.102:8080/api/v1/project/save",
           {
             method: "POST",
             body: formData,
@@ -425,10 +559,14 @@ const AddNewScreen = ({ navigation, route }) => {
         console.log(result);
 
         if (result.status === 200) {
+          setisLoading(false);
           Dialog.show({
             type: ALERT_TYPE.SUCCESS,
             title: "Success",
-            textBody: "Project Details has been added Successfully.",
+            textBody:
+              mode == "edit"
+                ? "Project Details has been updated Successfully."
+                : "Project Details has been added Successfully.",
             button: "Close",
             autoClose: 2000, // auto-close after 3 seconds
             closeOnOverlayTap: true,
@@ -438,6 +576,7 @@ const AddNewScreen = ({ navigation, route }) => {
             navigation.pop(); // or navigation.pop()
           }, 2000);
         } else {
+          setisLoading(false);
           // Show error dialog
           Dialog.show({
             type: ALERT_TYPE.DANGER,
@@ -449,6 +588,7 @@ const AddNewScreen = ({ navigation, route }) => {
           });
         }
       } catch (err) {
+        setisLoading(false);
         console.error("Error creating project:", err);
         // Show error dialog
         Dialog.show({
@@ -511,7 +651,7 @@ const AddNewScreen = ({ navigation, route }) => {
         formData.append("task", JSON.stringify(project));
         console.warn(formData);
 
-        const response = await fetch("http:192.168.8.103/api/v1/task/save", {
+        const response = await fetch("http:192.168.8.102/api/v1/task/save", {
           method: "POST",
           body: formData,
         });
@@ -520,6 +660,7 @@ const AddNewScreen = ({ navigation, route }) => {
         console.log(result);
 
         if (result.status === 200) {
+          setisLoading(false);
           Dialog.show({
             type: ALERT_TYPE.SUCCESS,
             title: "Success",
@@ -533,6 +674,7 @@ const AddNewScreen = ({ navigation, route }) => {
             navigation.pop(); // or navigation.pop()
           }, 2000);
         } else {
+          setisLoading(false);
           Dialog.show({
             type: ALERT_TYPE.DANGER,
             title: "Error",
@@ -543,6 +685,7 @@ const AddNewScreen = ({ navigation, route }) => {
           });
         }
       } catch (err) {
+        setisLoading(false);
         console.error("Error creating project:", err);
         Dialog.show({
           type: ALERT_TYPE.DANGER,
@@ -583,19 +726,23 @@ const AddNewScreen = ({ navigation, route }) => {
     <AlertNotificationRoot>
       <View style={{ flex: 1, backgroundColor: Colors.bodyBackColor }}>
         <Header
-          header={from === "task" ? "Add new task" : "Add new project"}
+          header={
+            from === "task"
+              ? mode === "edit"
+                ? "Update task"
+                : "Add new task"
+              : from === "project"
+              ? mode === "edit"
+                ? "Update project"
+                : "Add new project"
+              : "Add new"
+          }
           navigation={navigation}
         />
 
         <Formik
-          initialValues={{
-            taskName: "",
-            projectName: "",
-            startingDate: "",
-            endingDate: "",
-            selectedProject: null,
-            selectedTeam: "",
-          }}
+          enableReinitialize={true}
+          initialValues={loadValues || initialValues}
           validationSchema={validationSchema}
           onSubmit={(values) => {
             console.warn("dddddd");
@@ -618,6 +765,7 @@ const AddNewScreen = ({ navigation, route }) => {
                 showsVerticalScrollIndicator={false}
                 automaticallyAdjustKeyboardInsets
               >
+                {loadingDialog()}
                 {/* {calendarDialog(setFieldValue)} */}
                 {from == "task" && (
                   <View style={{ margin: Sizes.fixPadding * 2 }}>
@@ -948,7 +1096,17 @@ const AddNewScreen = ({ navigation, route }) => {
                 </View>
                 {/* {memberInfo()} */}
                 <Button
-                  buttonText={from == "task" ? "Add task" : "Add project"}
+                  buttonText={
+                    from === "task"
+                      ? mode === "edit"
+                        ? "Update task"
+                        : "Add  task"
+                      : from === "project"
+                      ? mode === "edit"
+                        ? "Update project"
+                        : "Add  project"
+                      : "Add new"
+                  }
                   onPress={handleSubmit}
                 />
 

@@ -11,6 +11,7 @@ import {
   ScrollView,
   TextInput,
   KeyboardAvoidingView,
+  Alert,
 } from "react-native";
 import React, { useRef, useState, useEffect, useMemo } from "react";
 import {
@@ -28,6 +29,12 @@ import { TabView, TabBar } from "react-native-tab-view";
 import TaskDeleteDialog from "../../components/taskDeleteDialog";
 import { Menu, MenuItem } from "react-native-material-menu";
 import TaskCompleteDialog from "../../components/taskCompleteDialog";
+import {
+  ALERT_TYPE,
+  AlertNotificationRoot,
+  Dialog,
+  Toast,
+} from "react-native-alert-notification";
 
 // const optionsList = ['Delete project', 'Share project', 'Copy link', 'Complete Project'];
 
@@ -200,6 +207,41 @@ const ProjectDetailScreen = ({ navigation, route }) => {
       setteamMembers([...teamMembers, ...route.params.members]);
     }
   }, [route.params?.members]);
+  const updateStatus = async (projectId, status) => {
+    try {
+      // console.log("Calling:", `${API_URL}/project/updateStatus/${projectId}/${status}`);
+
+      const response = await fetch(
+        `http:192.168.8.102:8080/api/v1/project/updateStatus/${projectId}/${status}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+      console.log("Backend Response:", result);
+
+      if (result.status === 200) {
+        // Alert.alert("✅ Success", "Project status updated successfully!");
+        Dialog.show({
+          type: ALERT_TYPE.SUCCESS,
+          title: "Success",
+          textBody: "Project  has been completed Successfully.",
+          button: "Close",
+          autoClose: 2000, // auto-close after 3 seconds
+          closeOnOverlayTap: true,
+        });
+      } else {
+        Alert.alert("⚠️ Failed", result.errorMessages?.[0] || "Update failed");
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      Alert.alert("❌ Error", "Could not update status");
+    }
+  };
 
   const item = route.params.item;
   const category = route.params.category;
@@ -228,21 +270,23 @@ const ProjectDetailScreen = ({ navigation, route }) => {
     { key: "forth", title: "Comments" },
   ];
   const [showDeleteDialog, setshowDeleteDialog] = useState(false);
-    const [showCompleteDialog, setshowCompleteDialog] = useState(false);
+  const [showCompleteDialog, setshowCompleteDialog] = useState(false);
   const [showMenu, setshowMenu] = useState(false);
   const [teamMembers, setteamMembers] = useState(teamsList);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS == "ios" ? "height" : null}
-      style={{ flex: 1, backgroundColor: Colors.bodyBackColor }}
-    >
-      {header()}
-      {projectDetail()}
-      {tabBarInfo()}
-      {deleteDialog()}
-         {completeDialog()}
-    </KeyboardAvoidingView>
+    <AlertNotificationRoot>
+      <KeyboardAvoidingView
+        behavior={Platform.OS == "ios" ? "height" : null}
+        style={{ flex: 1, backgroundColor: Colors.bodyBackColor }}
+      >
+        {header()}
+        {projectDetail()}
+        {tabBarInfo()}
+        {deleteDialog()}
+        {completeDialog()}
+      </KeyboardAvoidingView>
+    </AlertNotificationRoot>
   );
 
   function deleteDialog() {
@@ -265,7 +309,7 @@ const ProjectDetailScreen = ({ navigation, route }) => {
     );
   }
 
-    function completeDialog() {
+  function completeDialog() {
     return (
       <TaskCompleteDialog
         visible={showCompleteDialog}
@@ -274,7 +318,10 @@ const ProjectDetailScreen = ({ navigation, route }) => {
         }}
         message="Are you sure you want to complete this project"
         onDelete={() => {
+          console.warn("dddddddd");
           setshowCompleteDialog(false);
+
+          updateStatus(item.id, "COMPLETED");
           // navigation.navigate({
           //   name: "Project",
           //   params: { id: item.id, category: category },
@@ -435,7 +482,7 @@ const ProjectDetailScreen = ({ navigation, route }) => {
                           : setshowDeleteDialog(true);
                       }
 
-                       if (index == 3) {
+                      if (index == 3) {
                         Platform.OS == "ios"
                           ? setTimeout(() => {
                               setshowCompleteDialog(true);
@@ -448,8 +495,6 @@ const ProjectDetailScreen = ({ navigation, route }) => {
                     {option}
                   </MenuItem>
                 ))}
-
-                
               </View>
             </Menu>
           </View>
