@@ -9,6 +9,8 @@ import {
   View,
   Image,
   Alert,
+  Platform,
+  Switch,
 } from "react-native";
 import { Colors, Fonts, Sizes, CommonStyles } from "../../constants/styles";
 import Header from "../../components/header";
@@ -34,6 +36,8 @@ import {
 } from "react-native-alert-notification";
 import { API_URL } from "@env";
 import { Circle } from "react-native-animated-spinkit";
+import { shareAsync } from "expo-sharing";
+
 const AddNewScreen = ({ navigation, route }) => {
   const from = route.params.from;
   const mode = route.params.mode;
@@ -141,7 +145,7 @@ const AddNewScreen = ({ navigation, route }) => {
                 name: att.imageOriginalName || `file_${index}`, // backend field
                 uri: "http://192.168.8.102:8080/uploads/" + att.filePath, // build correct URL
                 type: att.fileType || "application/octet-stream",
-                // saved: true, // mark as already saved
+                saved: true, // mark as already saved
               })
             );
             const initialValues = {
@@ -392,6 +396,54 @@ const AddNewScreen = ({ navigation, route }) => {
             fileName.endsWith(".xls") ||
             fileName.endsWith(".xlsx");
 
+          // Download to gallery function (does not modify attachments)
+          const downloadToGallery = async (file) => {
+            try {
+              // Step 1: download remote file to app cache
+              const localUri = `${FileSystem.cacheDirectory}${file.name}`;
+              const { uri } = await FileSystem.downloadAsync(
+                file.uri,
+                localUri
+              );
+
+              if (Platform.OS === "android") {
+                // Step 2: save to user-selected folder
+                const permissions =
+                  await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+                if (permissions.granted) {
+                  const base64 = await FileSystem.readAsStringAsync(uri, {
+                    encoding: FileSystem.EncodingType.Base64,
+                  });
+
+                  const newUri =
+                    await FileSystem.StorageAccessFramework.createFileAsync(
+                      permissions.directoryUri,
+                      file.name,
+                      file.type || "application/octet-stream"
+                    );
+
+                  await FileSystem.writeAsStringAsync(newUri, base64, {
+                    encoding: FileSystem.EncodingType.Base64,
+                  });
+
+                  Alert.alert("Success", `${file.name} saved successfully!`);
+                } else {
+                  Alert.alert(
+                    "Permission denied",
+                    "Cannot save file without permission."
+                  );
+                }
+              } else {
+                // iOS: fallback share
+                await shareAsync(uri);
+              }
+            } catch (error) {
+              console.log("Download error:", error);
+              Alert.alert("Error", "Failed to download file.");
+            }
+          };
+
           return (
             <View key={index} style={styles.attachmentRow}>
               {/* Open file on tap */}
@@ -432,6 +484,13 @@ const AddNewScreen = ({ navigation, route }) => {
                 >
                   {file.name}
                 </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => downloadToGallery(file)}
+                style={{ marginHorizontal: Sizes.fixPadding }}
+              >
+                <MaterialIcons name="file-download" size={24} color="blue" />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
@@ -518,9 +577,15 @@ const AddNewScreen = ({ navigation, route }) => {
         let formData = new FormData();
         for (let i = 0; i < attachments.length; i++) {
           const file = attachments[i];
+          let fileUri = "";
           // if (file.saved) continue;
-          const localUri = await downloadToCache(file.uri, file.name);
-          const fileUri = localUri;
+          if (file.saved) {
+            const localUri = await downloadToCache(file.uri, file.name);
+            fileUri = localUri;
+          } else {
+            fileUri = file.uri;
+          }
+
           console.warn(fileUri);
           const mimeType = getMimeType(file.name || file.uri);
           console.warn(mimeType);
@@ -562,7 +627,7 @@ const AddNewScreen = ({ navigation, route }) => {
           // startDate:values?.startingDate,
           endDate: formatDate(parseDMY(values?.endingDate)),
           projectStatus: mode == "edit" ? values?.projectStatus : "PENDING",
-          // status:mode=="edit"?
+          status:values?.status
           // endDate:values?.endingDate,
           // team: selectedTeam,
         };
@@ -670,6 +735,7 @@ const AddNewScreen = ({ navigation, route }) => {
           // endDate:values?.endingDate,
           // team: selectedTeam,
           project: values?.selectedProject?.projectId,
+          status:values?.status
         };
         formData.append("task", JSON.stringify(project));
         console.warn(formData);
@@ -1066,7 +1132,32 @@ const AddNewScreen = ({ navigation, route }) => {
                         />
                       </View>
                     </View>
+
+                    {/* Status Toggle */}
                   </Touchable>
+                </View>
+                <View
+                  style={{
+                    margin: Sizes.fixPadding * 2.0,
+                    flexDirection: "row",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ ...Fonts.blackColor16Medium, flex: 1 }}>
+                    Status
+                  </Text>
+                  <Switch
+                    value={values.status}
+                    onValueChange={(val) => setFieldValue("status", val)}
+                    trackColor={{
+                      false: Colors.grayColor,
+                      true: Colors.primaryColor,
+                    }}
+                    thumbColor={Colors.whiteColor}
+                  />
+                  <Text style={{ marginLeft: 170, ...Fonts.blackColor15Medium }}>
+                    {values.status ? "Active" : "Inactive"}
+                  </Text>
                 </View>
                 {/* {memberInfo()} */}
                 <Button
