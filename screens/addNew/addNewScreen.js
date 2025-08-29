@@ -85,7 +85,7 @@ const AddNewScreen = ({ navigation, route }) => {
 
           // const response = await fetch(`${API_URL}/project/`); // change localhost to your backend IP if using mobile
           const response = await fetch(
-            "http:192.168.8.102:8080/api/v1/project/"
+            "http:192.168.0.100:8080/api/v1/project/"
           );
           const result = await response.json();
           // console.warn(result);
@@ -124,7 +124,7 @@ const AddNewScreen = ({ navigation, route }) => {
 
           // const response = await fetch(`${API_URL}/project/`); // change localhost to your backend IP if using mobile
           const response = await fetch(
-            `http:192.168.8.102:8080/api/v1/project/${projectId}`
+            `http://192.168.0.100:8080/api/v1/project/${projectId}`
           );
           const result = await response.json();
           // console.warn(result);
@@ -143,7 +143,7 @@ const AddNewScreen = ({ navigation, route }) => {
             const savedAttachments = (values.attachments || []).map(
               (att, index) => ({
                 name: att.imageOriginalName || `file_${index}`, // backend field
-                uri: "http://192.168.8.102:8080/uploads/" + att.filePath, // build correct URL
+                uri: "http://192.168.0.100:8080/uploads/" + att.filePath, // build correct URL
                 type: att.fileType || "application/octet-stream",
                 saved: true, // mark as already saved
               })
@@ -163,6 +163,7 @@ const AddNewScreen = ({ navigation, route }) => {
             console.warn(initialValues);
             setLoadValues(initialValues);
             setAttachments(savedAttachments);
+            setSelectedMembers(values?.teamMembers);
             // const projectNames = result.payload[0].map((item) => item.name);
             // console.warn(projectNames);
             // setSelectedProject(result.payload[0]); // because payload is wrapped in a list
@@ -181,13 +182,40 @@ const AddNewScreen = ({ navigation, route }) => {
     }
   }, []);
 
-  const teamsList = [
-    "Designer team",
-    "Developer team",
-    "HR team",
-    "Marketing team",
-    "Management team",
-  ];
+  useEffect(() => {
+    console.warn("called member...");
+
+    const fetchTeamMembers = async () => {
+      console.warn("member...");
+      try {
+        // const url = `${API_URL}/project/`;
+        // console.log(url);
+        const status = true;
+        // const response = await fetch(`${API_URL}/project/`); // change localhost to your backend IP if using mobile
+        const response = await fetch(
+          `http:192.168.0.100:8080/api/v1/member/status/${status}`
+        );
+        const result = await response.json();
+        console.warn(result);
+
+        if (result.status === 200) {
+          console.warn("Suucess");
+          // console.warn(result.payload[0]);
+          // const projectNames = result.payload[0].map((item) => item.name);
+          // console.warn(projectNames);
+          // setSelectedProject(result.payload[0]); // because payload is wrapped in a list
+        } else {
+          console.warn(result.errorMessages?.[0] || "No records found");
+        }
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      } finally {
+        setisLoading(false);
+      }
+      fetchTeamMembers();
+    };
+  }, []);
+
   const validationSchema = Yup.object().shape({
     taskName:
       from === "task"
@@ -569,7 +597,8 @@ const AddNewScreen = ({ navigation, route }) => {
   }
   const handleAdd = async (values) => {
     console.log("ddddd");
-    console.warn(values);
+    // console.warn(values);
+    // console.warn(selectedMembers);
     setisLoading(true);
 
     if (from == "project") {
@@ -585,7 +614,6 @@ const AddNewScreen = ({ navigation, route }) => {
           } else {
             fileUri = file.uri;
           }
-
           console.warn(fileUri);
           const mimeType = getMimeType(file.name || file.uri);
           console.warn(mimeType);
@@ -596,7 +624,7 @@ const AddNewScreen = ({ navigation, route }) => {
             // console.warn(`❌ Skipping invalid file at index ${i}`, file);
             continue;
           }
-          console.warn(safeName);
+          // console.warn(safeName);
 
           formData.append("files", {
             uri: fileUri,
@@ -604,7 +632,7 @@ const AddNewScreen = ({ navigation, route }) => {
             type: mimeType,
           });
         }
-        console.warn(formData);
+        // console.warn(formData);
         // Convert "dd/mm/yyyy" strings to ISO format "yyyy-MM-dd"
         const parseDMY = (str) => {
           const [day, month, year] = str.split("/").map(Number);
@@ -627,16 +655,17 @@ const AddNewScreen = ({ navigation, route }) => {
           // startDate:values?.startingDate,
           endDate: formatDate(parseDMY(values?.endingDate)),
           projectStatus: mode == "edit" ? values?.projectStatus : "PENDING",
-          status:values?.status
+          status: values?.status,
+          teamMembers: selectedMembers.map((m) => m.id),
           // endDate:values?.endingDate,
           // team: selectedTeam,
         };
 
         formData.append("project", JSON.stringify(project));
         // console.warn(formData);
-        // const response = await fetch("http:192.168.8.102:8080/api/v1/project/");
+        // const response = await fetch("http:192.168.0.100:8080/api/v1/project/");
         const response = await fetch(
-          "http:192.168.8.102:8080/api/v1/project/save",
+          "http:192.168.0.100:8080/api/v1/project/save",
           {
             method: "POST",
             body: formData,
@@ -660,9 +689,9 @@ const AddNewScreen = ({ navigation, route }) => {
             closeOnOverlayTap: true,
           });
           // Alert.alert("Success", "Project created successfully!");
-          setTimeout(() => {
-            navigation.pop(); // or navigation.pop()
-          }, 2000);
+          // setTimeout(() => {
+          //   navigation.pop(); // or navigation.pop()
+          // }, 2000);
         } else {
           setisLoading(false);
           // Show error dialog
@@ -735,12 +764,12 @@ const AddNewScreen = ({ navigation, route }) => {
           // endDate:values?.endingDate,
           // team: selectedTeam,
           project: values?.selectedProject?.projectId,
-          status:values?.status
+          status: values?.status,
         };
         formData.append("task", JSON.stringify(project));
         console.warn(formData);
 
-        const response = await fetch("http:192.168.8.102/api/v1/task/save", {
+        const response = await fetch("http:192.168.0.100/api/v1/task/save", {
           method: "POST",
           body: formData,
         });
@@ -934,7 +963,7 @@ const AddNewScreen = ({ navigation, route }) => {
                                 textStyle={{ ...Fonts.blackColor16Medium }}
                                 onPress={() => {
                                   setFieldValue("selectedProject", option);
-                                  setSelectedTeam(option);
+                                  // setSelectedTeam(option);
                                   setShowMenu(false);
                                 }}
                               >
@@ -1101,7 +1130,7 @@ const AddNewScreen = ({ navigation, route }) => {
                         {selectedMembers.slice(0, 4).map((item, index) => (
                           <Image
                             key={index}
-                            source={item.image}
+                            source={{ uri: item.image }}
                             style={{
                               ...styles.selectedMemberStyle,
                               left: -(index * 6),
@@ -1155,7 +1184,9 @@ const AddNewScreen = ({ navigation, route }) => {
                     }}
                     thumbColor={Colors.whiteColor}
                   />
-                  <Text style={{ marginLeft: 170, ...Fonts.blackColor15Medium }}>
+                  <Text
+                    style={{ marginLeft: 170, ...Fonts.blackColor15Medium }}
+                  >
                     {values.status ? "Active" : "Inactive"}
                   </Text>
                 </View>
