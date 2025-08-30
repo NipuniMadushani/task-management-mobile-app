@@ -111,7 +111,7 @@ const ProjectScreen = ({ navigation, route }) => {
         let projectStatus = "PENDING";
         try {
           const response = await fetch(
-            `http:192.168.8.100:8080/api/v1/project/active/${projectStatus}`
+            `http:192.168.8.101:8080/api/v1/project/active/${projectStatus}`
           );
           const result = await response.json();
 
@@ -144,20 +144,46 @@ const ProjectScreen = ({ navigation, route }) => {
                 totalTasks > 0
                   ? Math.round((completedTasks / totalTasks) * 100)
                   : 0;
+              const progressColor =
+                progress === 100 ? Colors.greenColor : Colors.darkBlueColor;
 
+              const today = new Date();
+              today.setHours(0, 0, 0, 0); // normalize today
+
+              const endDate = new Date(p.endDate);
+              endDate.setHours(0, 0, 0, 0);
+
+              let deadlineText = null;
+              let deadlineColor = null;
+
+              if (endDate < today) {
+                deadlineText = " ⚠️ Due date has passed";
+                deadlineColor = Colors.redColor;
+              } else if (endDate.getTime() === today.getTime()) {
+                deadlineText = "⏰ Due date is today";
+                deadlineColor = Colors.darkGreenColor;
+              }
+
+              // const today = new Date();
+              // const endDate = new Date(p.endDate); // assuming item.endDate is in ISO format
+              const isDeadlinePassed = today >= endDate;
               return {
                 id: p.projectId, // or index + 1
                 title: p.name,
-                date: new Date(p.startDate).toLocaleDateString("en-GB", {
+                date: new Date(p.endDate).toLocaleDateString("en-GB", {
                   day: "2-digit",
                   month: "short",
                   year: "numeric",
                 }),
+
                 taskCount: `${totalTasks} task${totalTasks > 1 ? "s" : ""}`,
                 progress: progress,
-                members: dummyMembers.slice(0, p.membersCount || 5),
-                fill: Colors.tomatoColor,
+                // members: dummyMembers.slice(0, p.membersCount || 5),
+                fill: progressColor,
                 unfill: "rgba(218, 152, 135, 0.16)",
+                isDeadlinePassed: isDeadlinePassed,
+                deadlineText: deadlineText,
+                deadlineColor: deadlineColor,
               };
             });
 
@@ -182,11 +208,122 @@ const ProjectScreen = ({ navigation, route }) => {
     return unsubscribe;
   }, [navigation]);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      const fetchActiveProjects = async () => {
+        console.warn("fetch");
+        let projectStatus = "COMPLETED";
+        try {
+          const response = await fetch(
+            `http:192.168.8.101:8080/api/v1/project/active/${projectStatus}`
+          );
+          const result = await response.json();
+
+          if (result.status === 200) {
+            const projects = result.payload[0]; // actual list from backend
+            // console.warn(projects);
+            // const formattedProjects = projects.map((p, index) => ({
+
+            //   id: p.projectId, // or index + 1
+            //   title: p.name,
+            //   date: new Date(p.startDate).toLocaleDateString("en-GB", {
+            //     day: "2-digit",
+            //     month: "short",
+            //     year: "numeric",
+            //   }),
+            //   taskCount: `${p.taskCount.length} task`,
+            //   progress: p.progress || 30,
+            //   members: dummyMembers.slice(0, p.membersCount || 5),
+            //   fill: Colors.tomatoColor,
+            //   unfill: "rgba(218, 152, 135, 0.16)",
+            // }));
+            const formattedProjects = projects.map((p, index) => {
+              const taskCountMap = p.taskCount || {};
+              const totalTasks = Object.values(taskCountMap).reduce(
+                (sum, count) => sum + count,
+                0
+              );
+              const completedTasks = taskCountMap["COMPLETED"] || 0; // get completed tasks
+              const progress =
+                totalTasks > 0
+                  ? Math.round((completedTasks / totalTasks) * 100)
+                  : 0;
+              const colorValues = Object.values(Colors);
+
+              // Function to pick a random color
+              function getRandomColor() {
+                const index = Math.floor(Math.random() * colorValues.length);
+                return colorValues[index];
+              }
+              // const progressColor =
+              //   progress === 100 ? Colors.greenColor : Colors.darkBlueColor;
+
+              // const today = new Date();
+              // today.setHours(0, 0, 0, 0); // normalize today
+
+              // const endDate = new Date(p.endDate);
+              // endDate.setHours(0, 0, 0, 0);
+
+              // let deadlineText = null;
+              // let deadlineColor = null;
+
+              // if (endDate < today) {
+              //   deadlineText = " ⚠️ Due date has passed";
+              //   deadlineColor = Colors.redColor;
+              // } else if (endDate.getTime() === today.getTime()) {
+              //   deadlineText = "⏰ Due date is today";
+              //   deadlineColor = Colors.darkGreenColor;
+              // }
+
+              // const today = new Date();
+              // const endDate = new Date(p.endDate); // assuming item.endDate is in ISO format
+              // const isDeadlinePassed = today >= endDate;
+              //  const index = Math.floor(Math.random() * progressColors.length);
+
+              return {
+                id: p.projectId, // or index + 1
+                title: p.name,
+                date: new Date(p.endDate).toLocaleDateString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                }),
+
+                taskCount: `${totalTasks} task${totalTasks > 1 ? "s" : ""}`,
+                progress: progress,
+                // members: dummyMembers.slice(0, p.membersCount || 5),
+                fill: getRandomColor(),
+                unfill: "rgba(218, 152, 135, 0.16)",
+                // // isDeadlinePassed: isDeadlinePassed,
+                // deadlineText: deadlineText,
+                // deadlineColor: deadlineColor,
+              };
+            });
+
+            console.warn(formattedProjects);
+            setcompleteProjects(formattedProjects);
+            // if backend wraps with Collections.singletonList(response)
+            // then result.payload[0] is the actual list
+            //   setProjects(result.payload[0]);
+          } else {
+            setcompleteProjects([]);
+            console.warn(
+              result.errorMessages?.[0] || "No active projects found"
+            );
+          }
+        } catch (error) {
+          console.error("Error fetching active projects:", error);
+        }
+      };
+
+      fetchActiveProjects(); // refresh whenever screen is focused
+    });
+    return unsubscribe;
+  }, [navigation]);
+
   const [index, setIndex] = useState(0);
   const [activeProjects, setactiveProjects] = useState([]);
-  const [completeProjects, setcompleteProjects] = useState(
-    completedProjectsList
-  );
+  const [completeProjects, setcompleteProjects] = useState([]);
 
   //   useEffect(() => {
 
@@ -417,7 +554,7 @@ const Complete = (props) => {
               </View>
             </View>
           </View>
-          <View
+          {/* <View
             style={{
               ...CommonStyles.rowAlignCenter,
               marginRight:
@@ -444,7 +581,7 @@ const Complete = (props) => {
                 </Text>
               </View>
             ) : null}
-          </View>
+          </View> */}
         </View>
         <View
           style={{
@@ -515,7 +652,17 @@ const Active = (props) => {
             <Text numberOfLines={1} style={{ ...Fonts.blackColor16Medium }}>
               {item.title}
             </Text>
-
+            {item?.isDeadlinePassed && (
+              <Text
+                style={{
+                  color: item?.deadlineColor,
+                  marginTop: 4,
+                  fontSize: 12,
+                }}
+              >
+                {item?.deadlineText}
+              </Text>
+            )}
             <View
               style={{
                 ...CommonStyles.rowAlignCenter,
@@ -532,7 +679,11 @@ const Active = (props) => {
                   numberOfLines={1}
                   style={{
                     flex: 1,
-                    ...Fonts.grayColor12SemiBold,
+                    color: item?.isDeadlinePassed
+                      ? item.deadlineColor
+                      : Fonts.grayColor12SemiBold.color,
+                    fontSize: Fonts.grayColor12SemiBold.fontSize,
+                    fontWeight: Fonts.grayColor12SemiBold.fontWeight,
                     marginLeft: Sizes.fixPadding - 5.0,
                   }}
                 >
@@ -575,7 +726,7 @@ const Active = (props) => {
               </View>
             </View>
           </View>
-          <View
+          {/* <View
             style={{
               ...CommonStyles.rowAlignCenter,
               marginRight:
@@ -602,7 +753,7 @@ const Active = (props) => {
                 </Text>
               </View>
             ) : null}
-          </View>
+          </View> */}
         </View>
         <View
           style={{
