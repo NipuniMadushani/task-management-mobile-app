@@ -126,7 +126,7 @@ const ProjectScreen = ({ navigation, route }) => {
                 month: "short",
                 year: "numeric",
               }),
-              taskCount: p.taskCount ? `${p.taskCount} task` : "5 task",
+              taskCount: `${p.taskCount} task`,
               progress: p.progress || 30,
               members: dummyMembers.slice(0, p.membersCount || 5),
               fill: Colors.tomatoColor,

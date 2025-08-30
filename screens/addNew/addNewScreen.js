@@ -71,6 +71,7 @@ const AddNewScreen = ({ navigation, route }) => {
     selectedProject: null,
     selectedTeam: "",
     projectStatus: "",
+    taskStatus: "",
     status: true,
   };
   const [loadValues, setLoadValues] = useState(null);
@@ -677,7 +678,7 @@ const AddNewScreen = ({ navigation, route }) => {
         // console.warn(formData);
         // const response = await fetch("http:192.168.8.100:8080/api/v1/project/");
         const response = await fetch(
-          "http:192.168.8.100:8080/api/v1/project/save",
+          "http://192.168.8.100:8080/api/v1/project/save",
           {
             method: "POST",
             body: formData,
@@ -735,9 +736,17 @@ const AddNewScreen = ({ navigation, route }) => {
         let formData = new FormData();
         for (let i = 0; i < attachments.length; i++) {
           const file = attachments[i];
-
-          const fileUri = file.uri;
+          let fileUri = "";
+          // if (file.saved) continue;
+          if (file.saved) {
+            const localUri = await downloadToCache(file.uri, file.name);
+            fileUri = localUri;
+          } else {
+            fileUri = file.uri;
+          }
+          console.warn(fileUri);
           const mimeType = getMimeType(file.name || file.uri);
+          console.warn(mimeType);
           const safeName =
             file.name?.replace(/[^a-zA-Z0-9._-]/g, "_") ||
             `file_${Date.now()}_${i}`;
@@ -745,6 +754,7 @@ const AddNewScreen = ({ navigation, route }) => {
             // console.warn(`❌ Skipping invalid file at index ${i}`, file);
             continue;
           }
+          // console.warn(safeName);
 
           formData.append("files", {
             uri: fileUri,
@@ -766,22 +776,22 @@ const AddNewScreen = ({ navigation, route }) => {
           return `${year}-${month}-${day}`;
         };
 
-        const project = {
+        const task = {
+          taskId: mode == "edit" ? item?.id : "",
           name: values?.taskName,
-          // project: values?.selectedProject,
           startDate: formatDate(parseDMY(values?.startingDate)),
-
-          // startDate:values?.startingDate,
           endDate: formatDate(parseDMY(values?.endingDate)),
           // endDate:values?.endingDate,
           // team: selectedTeam,
           project: values?.selectedProject?.projectId,
           status: values?.status,
+          taskStatus: mode == "edit" ? values?.taskStatus : "PENDING",
+          teamMembers: selectedMembers.map((m) => m.id),
         };
-        formData.append("task", JSON.stringify(project));
+        formData.append("task", JSON.stringify(task));
         console.warn(formData);
 
-        const response = await fetch("http:192.168.8.100/api/v1/task/save", {
+        const response = await fetch("http://192.168.8.100:8080/api/v1/task/save", {
           method: "POST",
           body: formData,
         });
