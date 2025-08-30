@@ -34,69 +34,6 @@ const dummyMembers = [
   require("../../assets/images/users/user8.png"),
 ];
 
-const activeProjectsList = [
-  {
-    id: "1",
-    title: "Shopping app project",
-    date: "25 feb 2023",
-    taskCount: "15 task",
-    progress: 30,
-    members: dummyMembers.slice(0, 6),
-    fill: Colors.woodenColor,
-    unfill: "rgba(218, 152, 135, 0.16)",
-  },
-  {
-    id: "2",
-    title: "Food delivery app project",
-    date: "22 feb 2023",
-    taskCount: "15 task",
-    progress: 50,
-    members: dummyMembers.slice(0, 5),
-    fill: Colors.parrotColor,
-    unfill: "rgba(102, 195, 144, 0.16)",
-  },
-  {
-    id: "3",
-    title: "5 star hotel website",
-    date: "22 feb 2023",
-    taskCount: "10 task",
-    progress: 60,
-    members: dummyMembers.slice(0, 7),
-    fill: Colors.tomatoColor,
-    unfill: "rgba(229, 113, 110, 0.16)",
-  },
-  {
-    id: "4",
-    title: "Student tracking app",
-    date: "9 feb 2023",
-    taskCount: "15 task",
-    progress: 60,
-    members: dummyMembers.slice(0, 8),
-    fill: Colors.blueColor,
-    unfill: "rgba(124, 146, 228, 0.16)",
-  },
-  {
-    id: "5",
-    title: "PDF scanner app project",
-    date: "8 feb 2023",
-    taskCount: "10 task",
-    progress: 80,
-    members: dummyMembers.slice(0, 9),
-    fill: Colors.woodenColor,
-    unfill: "rgba(218, 152, 135, 0.16)",
-  },
-  {
-    id: "6",
-    title: "Ecommerce app project",
-    date: "9 feb 2023",
-    taskCount: "15 task",
-    progress: 90,
-    members: dummyMembers.slice(0, 6),
-    fill: Colors.tomatoColor,
-    unfill: "rgba(229, 113, 110, 0.16)",
-  },
-];
-
 const completedProjectsList = [
   {
     id: "1",
@@ -174,7 +111,7 @@ const ProjectScreen = ({ navigation, route }) => {
         let projectStatus = "PENDING";
         try {
           const response = await fetch(
-            `http:192.168.0.100:8080/api/v1/project/active/${projectStatus}`
+            `http:192.168.8.100:8080/api/v1/project/active/${projectStatus}`
           );
           const result = await response.json();
 
@@ -232,7 +169,6 @@ const ProjectScreen = ({ navigation, route }) => {
       {projectAndTaskInfo()}
       {tabBarInfo()}
       {addButton()}
-      
     </View>
   );
 
@@ -551,7 +487,6 @@ const Active = (props) => {
               {item.title}
             </Text>
 
-            
             <View
               style={{
                 ...CommonStyles.rowAlignCenter,
@@ -593,21 +528,21 @@ const Active = (props) => {
                   {item.taskCount}
                 </Text>
                 <Touchable
-              onPress={() => {
-                props.navigation.push("AddNew", {
-                  from: "project",
-                  mode: "edit",
-                  project: item,
-                });
-              }}
-              // style={{ marginHorizontal: }}
-            >
-              <MaterialIcons
-                name="edit"
-                size={22}
-                color={Colors.primaryColor}
-              />
-            </Touchable>
+                  onPress={() => {
+                    props.navigation.push("AddNew", {
+                      from: "project",
+                      mode: "edit",
+                      project: item,
+                    });
+                  }}
+                  // style={{ marginHorizontal: }}
+                >
+                  <MaterialIcons
+                    name="edit"
+                    size={22}
+                    color={Colors.primaryColor}
+                  />
+                </Touchable>
               </View>
             </View>
           </View>

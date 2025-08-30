@@ -85,7 +85,7 @@ const AddNewScreen = ({ navigation, route }) => {
 
           // const response = await fetch(`${API_URL}/project/`); // change localhost to your backend IP if using mobile
           const response = await fetch(
-            "http:192.168.0.100:8080/api/v1/project/"
+            "http:192.168.8.100:8080/api/v1/project/"
           );
           const result = await response.json();
           // console.warn(result);
@@ -115,7 +115,7 @@ const AddNewScreen = ({ navigation, route }) => {
     if (mode == "edit" && from == "project") {
       const fetchProjects = async () => {
         setisLoading(true);
-        console.warn(item);
+        // console.warn(item);
         console.warn("get existing project...");
         try {
           const projectId = item?.id;
@@ -124,7 +124,7 @@ const AddNewScreen = ({ navigation, route }) => {
 
           // const response = await fetch(`${API_URL}/project/`); // change localhost to your backend IP if using mobile
           const response = await fetch(
-            `http://192.168.0.100:8080/api/v1/project/${projectId}`
+            `http://192.168.8.100:8080/api/v1/project/${projectId}`
           );
           const result = await response.json();
           // console.warn(result);
@@ -138,12 +138,12 @@ const AddNewScreen = ({ navigation, route }) => {
               const [year, month, day] = dateStr.split("-"); // "2025-08-14" → ["2025","08","14"]
               return `${day}/${month}/${year}`;
             };
-            console.warn(values.attachments);
+            // console.warn(values.attachments);
             // Map backend attachments into your frontend format
             const savedAttachments = (values.attachments || []).map(
               (att, index) => ({
                 name: att.imageOriginalName || `file_${index}`, // backend field
-                uri: "http://192.168.0.100:8080/uploads/" + att.filePath, // build correct URL
+                uri: "http://192.168.8.100:8080/uploads/" + att.filePath, // build correct URL
                 type: att.fileType || "application/octet-stream",
                 saved: true, // mark as already saved
               })
@@ -160,10 +160,22 @@ const AddNewScreen = ({ navigation, route }) => {
               // selectedProject: null,
               selectedTeam: "",
             };
-            console.warn(initialValues);
+            // console.warn(initialValues);
             setLoadValues(initialValues);
             setAttachments(savedAttachments);
-            setSelectedMembers(values?.teamMembers);
+            console.warn(values?.teamMembers);
+            const membersList = (values?.teamMembers || []).map((item) => ({
+              id: item.id,
+              name: item.name,
+              profession: item.designation,
+              selected: false,
+              image: item.attachment
+                ? `data:${item.attachment.mimeType};base64,${item.attachment.data}`
+                : null,
+            }));
+            setSelectedMembers(membersList);
+
+            // setSelectedMembers(values?.teamMembers);
             // const projectNames = result.payload[0].map((item) => item.name);
             // console.warn(projectNames);
             // setSelectedProject(result.payload[0]); // because payload is wrapped in a list
@@ -193,7 +205,7 @@ const AddNewScreen = ({ navigation, route }) => {
         const status = true;
         // const response = await fetch(`${API_URL}/project/`); // change localhost to your backend IP if using mobile
         const response = await fetch(
-          `http:192.168.0.100:8080/api/v1/member/status/${status}`
+          `http://192.168.8.100:8080/api/v1/member/status/${status}`
         );
         const result = await response.json();
         console.warn(result);
@@ -663,9 +675,9 @@ const AddNewScreen = ({ navigation, route }) => {
 
         formData.append("project", JSON.stringify(project));
         // console.warn(formData);
-        // const response = await fetch("http:192.168.0.100:8080/api/v1/project/");
+        // const response = await fetch("http:192.168.8.100:8080/api/v1/project/");
         const response = await fetch(
-          "http:192.168.0.100:8080/api/v1/project/save",
+          "http:192.168.8.100:8080/api/v1/project/save",
           {
             method: "POST",
             body: formData,
@@ -689,9 +701,9 @@ const AddNewScreen = ({ navigation, route }) => {
             closeOnOverlayTap: true,
           });
           // Alert.alert("Success", "Project created successfully!");
-          // setTimeout(() => {
-          //   navigation.pop(); // or navigation.pop()
-          // }, 2000);
+          setTimeout(() => {
+            navigation.pop(); // or navigation.pop()
+          }, 2000);
         } else {
           setisLoading(false);
           // Show error dialog
@@ -769,7 +781,7 @@ const AddNewScreen = ({ navigation, route }) => {
         formData.append("task", JSON.stringify(project));
         console.warn(formData);
 
-        const response = await fetch("http:192.168.0.100/api/v1/task/save", {
+        const response = await fetch("http:192.168.8.100/api/v1/task/save", {
           method: "POST",
           body: formData,
         });
