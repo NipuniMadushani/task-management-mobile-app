@@ -117,21 +117,50 @@ const ProjectScreen = ({ navigation, route }) => {
 
           if (result.status === 200) {
             const projects = result.payload[0]; // actual list from backend
-            console.warn(projects);
-            const formattedProjects = projects.map((p, index) => ({
-              id: p.projectId, // or index + 1
-              title: p.name,
-              date: new Date(p.startDate).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              }),
-              taskCount: `${p.taskCount} task`,
-              progress: p.progress || 30,
-              members: dummyMembers.slice(0, p.membersCount || 5),
-              fill: Colors.tomatoColor,
-              unfill: "rgba(218, 152, 135, 0.16)",
-            }));
+            // console.warn(projects);
+            // const formattedProjects = projects.map((p, index) => ({
+
+            //   id: p.projectId, // or index + 1
+            //   title: p.name,
+            //   date: new Date(p.startDate).toLocaleDateString("en-GB", {
+            //     day: "2-digit",
+            //     month: "short",
+            //     year: "numeric",
+            //   }),
+            //   taskCount: `${p.taskCount.length} task`,
+            //   progress: p.progress || 30,
+            //   members: dummyMembers.slice(0, p.membersCount || 5),
+            //   fill: Colors.tomatoColor,
+            //   unfill: "rgba(218, 152, 135, 0.16)",
+            // }));
+            const formattedProjects = projects.map((p, index) => {
+              const taskCountMap = p.taskCount || {};
+              const totalTasks = Object.values(taskCountMap).reduce(
+                (sum, count) => sum + count,
+                0
+              );
+              const completedTasks = taskCountMap["COMPLETED"] || 0; // get completed tasks
+              const progress =
+                totalTasks > 0
+                  ? Math.round((completedTasks / totalTasks) * 100)
+                  : 0;
+
+              return {
+                id: p.projectId, // or index + 1
+                title: p.name,
+                date: new Date(p.startDate).toLocaleDateString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                }),
+                taskCount: `${totalTasks} task${totalTasks > 1 ? "s" : ""}`,
+                progress: progress,
+                members: dummyMembers.slice(0, p.membersCount || 5),
+                fill: Colors.tomatoColor,
+                unfill: "rgba(218, 152, 135, 0.16)",
+              };
+            });
+
             console.warn(formattedProjects);
             setactiveProjects(formattedProjects);
             // if backend wraps with Collections.singletonList(response)
